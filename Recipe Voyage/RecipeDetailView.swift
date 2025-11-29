@@ -1,10 +1,3 @@
-//
-//  RecipeDetailView.swift
-//  Recipe Voyage
-//
-//  Created by Tomio Walkley-Miyagawa on 2025-11-29.
-//
-
 import SwiftUI
 
 // Shows a single recipe with all details
@@ -13,22 +6,13 @@ struct RecipeDetailView: View {
     // MARK: - Properties
     
     @Environment(\.dismiss) var dismiss
-    // Allows us to close this view
-    
     @ObservedObject var dataManager = CoreDataManager.shared
-    // Access to database
-    
     @StateObject private var audioManager = AudioManager()
-    // Manages audio playback/recording
     
     let recipe: RecipeEntity
-    // The recipe we're showing
     
     @State private var showingEditor = false
-    // Should we show the edit screen?
-    
     @State private var showingAudioRecorder = false
-    // Should we show the audio recording sheet?
     
     // MARK: - Body
     
@@ -55,8 +39,9 @@ struct RecipeDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                     
-                    // Description section
-                    if let description = recipe.recipeDescription, !description.isEmpty {
+                    // Description section - with safe unwrapping
+                    if let description = recipe.recipeDescription,
+                       !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         PaperSection(title: "Description") {
                             Text(description)
                                 .font(.custom("Georgia", size: 18))
@@ -65,22 +50,25 @@ struct RecipeDetailView: View {
                         }
                     }
                     
-                    // Ingredients section
-                    if !recipe.ingredientsArray.isEmpty {
-                        ingredientsSection
+                    // Ingredients section - safer check
+                    let ingredients = recipe.ingredientsArray
+                    if !ingredients.isEmpty {
+                        ingredientsSection(ingredients: ingredients)
                     }
                     
-                    // Preparation steps section
-                    if !recipe.stepsArray.isEmpty {
-                        stepsSection
+                    // Preparation steps section - safer check
+                    let steps = recipe.stepsArray
+                    if !steps.isEmpty {
+                        stepsSection(steps: steps)
                     }
                     
-                    // Audio recordings section
-                    if !recipe.audioNotesArray.isEmpty {
-                        audioNotesSection
+                    // Audio recordings section - safer check
+                    let audioNotes = recipe.audioNotesArray
+                    if !audioNotes.isEmpty {
+                        audioNotesSection(audioNotes: audioNotes)
                     }
                     
-                    Spacer(minLength: 140) // Space for bottom toolbar
+                    Spacer(minLength: 140)
                 }
                 .padding(40)
             }
@@ -88,36 +76,32 @@ struct RecipeDetailView: View {
             // Floating toolbar at bottom
             bottomToolbar
         }
-//        .sheet(isPresented: $showingEditor) {
-//            // Show editor when true
-//            RecipeEditorView(recipe: recipe)
-//        }
+        // Commented out until we build the editor
+        // .sheet(isPresented: $showingEditor) {
+        //     RecipeEditorView(recipe: recipe)
+        // }
         .sheet(isPresented: $showingAudioRecorder) {
-            // Show audio recorder when true
             AudioRecorderSheet(recipe: recipe)
         }
     }
     
     // MARK: - Ingredients Section
     
-    private var ingredientsSection: some View {
+    private func ingredientsSection(ingredients: [IngredientEntity]) -> some View {
         PaperSection(title: "Ingredients") {
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(recipe.ingredientsArray) { ingredient in
+                ForEach(ingredients) { ingredient in
                     HStack(alignment: .top, spacing: 8) {
-                        // Little leaf bullet point
                         Image(systemName: "leaf.fill")
                             .font(.system(size: 10))
                             .foregroundColor(.green.opacity(0.6))
                             .padding(.top, 4)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            // Ingredient name
                             Text(ingredient.name ?? "")
                                 .font(.custom("Georgia", size: 16))
                                 .fontWeight(.medium)
                             
-                            // Quantity (if provided)
                             if let quantity = ingredient.quantity, !quantity.isEmpty {
                                 Text(quantity)
                                     .font(.custom("Georgia", size: 14))
@@ -132,19 +116,16 @@ struct RecipeDetailView: View {
     
     // MARK: - Steps Section
     
-    private var stepsSection: some View {
+    private func stepsSection(steps: [StepEntity]) -> some View {
         PaperSection(title: "Preparation") {
             VStack(alignment: .leading, spacing: 16) {
-                // Loop through steps with index numbers
-                ForEach(Array(recipe.stepsArray.enumerated()), id: \.element) { index, step in
+                ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
                     HStack(alignment: .top, spacing: 12) {
-                        // Step number
                         Text("\(index + 1).")
                             .font(.custom("Georgia-Bold", size: 20))
                             .foregroundColor(.brown)
                             .frame(width: 30, alignment: .trailing)
                         
-                        // Step instruction
                         Text(step.instruction ?? "")
                             .font(.custom("Georgia", size: 16))
                             .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
@@ -157,15 +138,14 @@ struct RecipeDetailView: View {
     
     // MARK: - Audio Notes Section
     
-    private var audioNotesSection: some View {
+    private func audioNotesSection(audioNotes: [AudioNoteEntity]) -> some View {
         PaperSection(title: "Voice Notes") {
             VStack(spacing: 12) {
-                ForEach(recipe.audioNotesArray) { audioNote in
+                ForEach(audioNotes) { audioNote in
                     AudioNoteCell(
                         audioNote: audioNote,
                         audioManager: audioManager,
                         onDelete: {
-                            // Delete this audio note
                             dataManager.deleteAudioNote(audioNote)
                         }
                     )
@@ -178,20 +158,17 @@ struct RecipeDetailView: View {
     
     private var bottomToolbar: some View {
         VStack {
-            Spacer() // Push to bottom
+            Spacer()
             
             HStack(spacing: 16) {
-                // Back button
                 FloatingPaperButton(icon: "arrow.left") {
                     dismiss()
                 }
                 
-                // Edit button
                 FloatingPaperButton(icon: "pencil") {
                     showingEditor = true
                 }
                 
-                // Record audio button
                 FloatingPaperButton(icon: "mic.fill") {
                     showingAudioRecorder = true
                 }
@@ -203,7 +180,6 @@ struct RecipeDetailView: View {
 }
 
 // MARK: - Audio Recorder Sheet
-// This is the screen that slides up when you tap the microphone button
 
 struct AudioRecorderSheet: View {
     @Environment(\.dismiss) var dismiss
@@ -211,7 +187,6 @@ struct AudioRecorderSheet: View {
     @StateObject private var audioManager = AudioManager()
     
     let recipe: RecipeEntity
-    @State private var currentFileName: String?
     
     var body: some View {
         ZStack {
@@ -219,43 +194,24 @@ struct AudioRecorderSheet: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 32) {
-                // Title
                 Text("Record Voice Note")
                     .font(.custom("Georgia-Bold", size: 28))
                     .foregroundColor(.brown)
                 
                 Spacer()
                 
-                // The tape recorder button
                 TapeRecorderButton(audioManager: audioManager) { fileName, duration in
-                    // When recording finishes, save to database
                     dataManager.addAudioNote(to: recipe, fileName: fileName, duration: duration)
                     print("✅ Audio note saved to recipe")
                 }
                 
                 Spacer()
                 
-                // Done button
                 FloatingPaperButton(icon: "checkmark", label: "Done") {
                     dismiss()
                 }
             }
             .padding(40)
         }
-    }
-}
-
-// MARK: - Preview
-
-struct RecipeDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Create a sample recipe for preview
-        let context = CoreDataManager.shared.container.viewContext
-        let recipe = RecipeEntity(context: context)
-        recipe.title = "Sample Recipe"
-        recipe.symbol = "fork.knife"
-        recipe.colorHex = "#8B4513"
-        
-        return RecipeDetailView(recipe: recipe)
     }
 }
