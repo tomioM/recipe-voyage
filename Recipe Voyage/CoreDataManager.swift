@@ -41,9 +41,9 @@ class CoreDataManager: ObservableObject {
         // NSFetchRequest is like a search query
         let request = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
         
-        // Sort by creation date, newest first
+        // Sort by sortOrder for manual arrangement
         request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \RecipeEntity.createdDate, ascending: false)
+            NSSortDescriptor(keyPath: \RecipeEntity.sortOrder, ascending: true)
         ]
         
         do {
@@ -53,6 +53,31 @@ class CoreDataManager: ObservableObject {
         } catch {
             print("❌ Failed to fetch recipes: \(error)")
         }
+    }
+    
+    // MARK: - Reorder Recipes
+    // Move a recipe from one position to another
+    func moveRecipe(from sourceIndex: Int, to destinationIndex: Int) {
+        guard sourceIndex != destinationIndex,
+              sourceIndex >= 0, sourceIndex < recipes.count,
+              destinationIndex >= 0, destinationIndex < recipes.count else {
+            return
+        }
+        
+        // Reorder the array
+        var reordered = recipes
+        let movedRecipe = reordered.remove(at: sourceIndex)
+        reordered.insert(movedRecipe, at: destinationIndex)
+        
+        // Update sortOrder for all recipes
+        for (index, recipe) in reordered.enumerated() {
+            recipe.sortOrder = Int16(index)
+        }
+        
+        saveContext()
+        fetchRecipes()
+        
+        print("🔀 Reordered recipes")
     }
     
     // MARK: - Create Recipe
