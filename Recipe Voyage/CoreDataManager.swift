@@ -196,6 +196,24 @@ class CoreDataManager: ObservableObject {
         saveContext()
     }
     
+    // MARK: - Location
+    // Add or update location for a recipe
+    func setLocation(for recipe: RecipeEntity, latitude: Double, longitude: Double, name: String) {
+        recipe.latitude = latitude
+        recipe.longitude = longitude
+        recipe.locationName = name
+        saveContext()
+        print("📍 Set location: \(name) (\(latitude), \(longitude))")
+    }
+    
+    func removeLocation(from recipe: RecipeEntity) {
+        recipe.latitude = 0
+        recipe.longitude = 0
+        recipe.locationName = nil
+        saveContext()
+        print("📍 Removed location")
+    }
+    
     // MARK: - Private Helpers
     // Save changes to database
     private func saveContext() {
