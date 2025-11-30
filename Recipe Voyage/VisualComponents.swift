@@ -207,6 +207,7 @@ struct OrnamentalTitle: View {
             }
             .padding(.top, 8)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -240,5 +241,206 @@ struct ParchmentBackground: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false) // Don't block touches
         }
+    }
+}
+
+// MARK: - Scrapbook Audio Section
+// Audio recordings displayed in scrapbook style on the aside
+
+struct ScrapbookAudioSection: View {
+    let audioNotes: [AudioNoteEntity]
+    @ObservedObject var audioManager: AudioManager
+    let onDelete: (AudioNoteEntity) -> Void
+    let onAddRecording: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section header with add button
+            HStack {
+                Image(systemName: "waveform")
+                    .font(.system(size: 18))
+                    .foregroundColor(.brown)
+                Text("Voice Notes")
+                    .font(.custom("Georgia-Bold", size: 20))
+                    .foregroundColor(.brown)
+                Spacer()
+                Button(action: onAddRecording) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.brown)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Audio note cards
+            ForEach(audioNotes) { audioNote in
+                ScrapbookAudioCard(
+                    audioNote: audioNote,
+                    audioManager: audioManager,
+                    onDelete: { onDelete(audioNote) }
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Scrapbook Audio Card
+// Individual audio recording card with scrapbook styling
+
+struct ScrapbookAudioCard: View {
+    let audioNote: AudioNoteEntity
+    @ObservedObject var audioManager: AudioManager
+    let onDelete: () -> Void
+    
+    var isPlaying: Bool {
+        audioManager.isPlaying && audioManager.currentPlayingFileName == audioNote.audioFileName
+    }
+    
+    // Fixed rotation based on audio note ID for consistency
+    private var rotation: Double {
+        let hash = abs(audioNote.id?.hashValue ?? 0)
+        return Double((hash % 40)) / 10.0 - 2.0 // Range: -2.0 to +2.0
+    }
+    
+    var body: some View {
+        ZStack {
+            // Paper card background
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(red: 0.97, green: 0.96, blue: 0.93))
+                .shadow(color: .black.opacity(0.2), radius: 5, x: 2, y: 3)
+            
+            PaperTexture(type: "aged")
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            // Content
+            VStack(spacing: 12) {
+                // Play/Stop button
+                Button(action: {
+                    if let fileName = audioNote.audioFileName {
+                        audioManager.togglePlayback(fileName: fileName)
+                    }
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.brown.opacity(0.1))
+                            .frame(width: 60, height: 60)
+                        
+                        Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.brown)
+                    }
+                }
+                
+                // Duration
+                Text(audioManager.formatDuration(audioNote.duration))
+                    .font(.system(size: 14, design: .monospaced))
+                    .foregroundColor(.brown.opacity(0.7))
+                
+                // Delete button
+                Button(action: onDelete) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 12))
+                        Text("Remove")
+                            .font(.system(size: 12))
+                    }
+                    .foregroundColor(.red.opacity(0.6))
+                }
+            }
+            .padding(16)
+        }
+        .frame(width: 150, height: 160)
+        .rotationEffect(.degrees(rotation))
+    }
+}
+
+// MARK: - Scrapbook Photo Section
+// Photo attachment spaces in scrapbook style
+
+struct ScrapbookPhotoSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section header
+            HStack {
+                Image(systemName: "photo.on.rectangle")
+                    .font(.system(size: 18))
+                    .foregroundColor(.brown)
+                Text("Photos")
+                    .font(.custom("Georgia-Bold", size: 20))
+                    .foregroundColor(.brown)
+            }
+            .padding(.horizontal, 8)
+            
+            // Photo placeholders
+            VStack(spacing: 20) {
+                ScrapbookPhotoPlaceholder(size: CGSize(width: 200, height: 180), rotation: 2)
+                ScrapbookPhotoPlaceholder(size: CGSize(width: 160, height: 160), rotation: -3)
+                ScrapbookPhotoPlaceholder(size: CGSize(width: 180, height: 150), rotation: 1.5)
+            }
+        }
+    }
+}
+
+// MARK: - Scrapbook Photo Placeholder
+// Empty photo slot with tape effect
+
+struct ScrapbookPhotoPlaceholder: View {
+    let size: CGSize
+    let rotation: Double
+    
+    var body: some View {
+        ZStack {
+            // Photo frame/slot
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.15), radius: 4, x: 1, y: 2)
+            
+            // Dashed border
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
+                .foregroundColor(.brown.opacity(0.3))
+            
+            // Placeholder icon
+            VStack(spacing: 8) {
+                Image(systemName: "photo")
+                    .font(.system(size: 30))
+                    .foregroundColor(.brown.opacity(0.3))
+                Text("Tap to add")
+                    .font(.system(size: 12))
+                    .foregroundColor(.brown.opacity(0.4))
+            }
+            
+            // Tape pieces at top corners
+            TapeStrip()
+                .offset(x: -size.width/3, y: -size.height/2 + 10)
+            
+            TapeStrip()
+                .rotationEffect(.degrees(90))
+                .offset(x: size.width/3, y: -size.height/2 + 10)
+        }
+        .frame(width: size.width, height: size.height)
+        .rotationEffect(.degrees(rotation))
+    }
+}
+
+// MARK: - Tape Strip
+// Decorative tape piece for scrapbook effect
+
+struct TapeStrip: View {
+    var body: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.93, blue: 0.85),
+                        Color(red: 0.98, green: 0.96, blue: 0.88)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(width: 50, height: 20)
+            .opacity(0.8)
+            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
 }

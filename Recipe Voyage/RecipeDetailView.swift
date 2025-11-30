@@ -1,5 +1,6 @@
 import SwiftUI
 
+// ✏️ Claude can edit this file!
 // Shows a single recipe with all details
 struct RecipeDetailView: View {
     
@@ -29,64 +30,86 @@ struct RecipeDetailView: View {
     // MARK: - Body
     
     var body: some View {
-        ZStack {
-            // Background
-            ParchmentBackground()
-            
-            // Main scrollable content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    
-                    // Fancy title with big first letter
-                    OrnamentalTitle(
-                        text: recipe.title ?? "Untitled",
-                        color: recipe.displayColor
-                    )
-                    .padding(.top, 20)
-                    
-                    // Symbol icon
-                    Image(systemName: recipe.symbol ?? "fork.knife")
-                        .font(.system(size: 70))
-                        .foregroundColor(recipe.displayColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                    
-                    // Description section
-                    if let description = recipe.recipeDescription, !description.isEmpty {
-                        PaperSection(title: "Description") {
-                            Text(description)
-                                .font(.custom("Georgia", size: 18))
-                                .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
-                                .lineSpacing(6)
+        GeometryReader { geometry in
+            let _ = print("🔍 GeometryReader size: \(geometry.size)")
+            ZStack {
+                // Background
+                ParchmentBackground()
+                
+                // Main two-column layout
+                HStack(alignment: .top, spacing: 0) {
+                    // LEFT SIDE: Main recipe content
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 32) {
+                            
+                            // Fancy title with big first letter
+                            OrnamentalTitle(
+                                text: recipe.title ?? "Untitled",
+                                color: recipe.displayColor
+                            )
+                            .padding(.top, 20)
+                            
+                            // Symbol icon
+                            Image(systemName: recipe.symbol ?? "fork.knife")
+                                .font(.system(size: 70))
+                                .foregroundColor(recipe.displayColor)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                            
+                            // Description section
+                            if let description = recipe.recipeDescription, !description.isEmpty {
+                                PaperSection(title: "Description") {
+                                    Text(description)
+                                        .font(.custom("Georgia", size: 18))
+                                        .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
+                                        .lineSpacing(6)
+                                }
+                            }
+                            
+                            // Ingredients section
+                            if !recipe.ingredientsArray.isEmpty {
+                                ingredientsSection
+                            }
+                            
+                            // Preparation steps section
+                            if !recipe.stepsArray.isEmpty {
+                                stepsSection
+                            }
+                            
+                            Spacer(minLength: 140) // Space for bottom toolbar
                         }
+                        .padding(.leading, 40)
+                        .padding(.trailing, 20) // Less padding on right to allow overlap
+                        .padding(.vertical, 40)
                     }
+                    .frame(width: geometry.size.width * 0.65) // 65% width for content
+                    .background(Color.red.opacity(0.1)) // Debug: show left side
                     
-                    // Ingredients section
-                    if !recipe.ingredientsArray.isEmpty {
-                        ingredientsSection
+                    // RIGHT SIDE: Aside with audio and photos (overlapping)
+                    ScrollView {
+                        asideContent
+                            .padding(.top, 100)
+                            .padding(.trailing, 30)
                     }
-                    
-                    // Preparation steps section
-                    if !recipe.stepsArray.isEmpty {
-                        stepsSection
-                    }
-                    
-                    // Audio recordings section
-                    if !recipe.audioNotesArray.isEmpty {
-                        audioNotesSection
-                    }
-                    
-                    Spacer(minLength: 140) // Space for bottom toolbar
+                    .frame(width: geometry.size.width * 0.40) // 40% width for aside (overlaps 5%)
+                    .offset(x: -geometry.size.width * 0.05) // Move left to create overlap
+                    .background(Color.blue.opacity(0.1)) // Debug: show right side
+                    .zIndex(1) // Ensure aside is on top
                 }
-                .padding(40)
+                .id(refreshTrigger) // Force refresh when this changes
+                
+                // Floating toolbar at bottom
+                bottomToolbar
             }
-            .id(refreshTrigger) // Force refresh when this changes
-            
-            // Floating toolbar at bottom
-            bottomToolbar
         }
+        .ignoresSafeArea()
         .onAppear {
             // Refresh recipe data when view appears
+            print("✅ RecipeDetailView.onAppear called")
+            print("📝 Recipe title: \(recipe.title ?? "nil")")
+            print("🔍 Recipe has \(recipe.audioNotesArray.count) audio notes")
+            print("🔍 Recipe has \(recipe.ingredientsArray.count) ingredients")
+            print("🔍 Recipe has \(recipe.stepsArray.count) steps")
             dataManager.container.viewContext.refresh(recipe, mergeChanges: true)
             print("📱 RecipeDetailView appeared - recipe has \(recipe.audioNotesArray.count) audio notes")
         }
@@ -167,22 +190,26 @@ struct RecipeDetailView: View {
         }
     }
     
-    // MARK: - Audio Notes Section
+    // MARK: - Aside Content (Right Side)
     
-    private var audioNotesSection: some View {
-        PaperSection(title: "Voice Notes") {
-            VStack(spacing: 12) {
-                ForEach(recipe.audioNotesArray) { audioNote in
-                    AudioNoteCell(
-                        audioNote: audioNote,
-                        audioManager: audioManager,
-                        onDelete: {
-                            // Delete this audio note
-                            dataManager.deleteAudioNote(audioNote)
-                        }
-                    )
+    private var asideContent: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            // Audio recordings section (always visible)
+            ScrapbookAudioSection(
+                audioNotes: recipe.audioNotesArray,
+                audioManager: audioManager,
+                onDelete: { audioNote in
+                    dataManager.deleteAudioNote(audioNote)
+                },
+                onAddRecording: {
+                    showingAudioRecorder = true
                 }
-            }
+            )
+            
+            // Photo attachment spaces
+            ScrapbookPhotoSection()
+            
+            Spacer()
         }
     }
     
@@ -201,11 +228,6 @@ struct RecipeDetailView: View {
                 // Edit button
                 FloatingPaperButton(icon: "pencil") {
                     showingEditor = true
-                }
-                
-                // Record audio button
-                FloatingPaperButton(icon: "mic.fill") {
-                    showingAudioRecorder = true
                 }
             }
             .padding(.horizontal, 32)
