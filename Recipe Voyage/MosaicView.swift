@@ -173,6 +173,7 @@ struct SimpleTileCard: View {
 
 // MARK: - Stitching Overlay
 // Creates a hand-sewn stitching effect on shared edges between tiles
+// IMPORTANT: Only draws on TOP and LEFT edges to avoid duplication with neighbors
 
 struct StitchingOverlay: View {
     let hasTopNeighbor: Bool
@@ -180,122 +181,180 @@ struct StitchingOverlay: View {
     let hasLeftNeighbor: Bool
     let hasRightNeighbor: Bool
     
-    let stitchColor: Color = .red // Bright red for testing
-    let stitchLength: CGFloat = 12
-    let stitchSpacing: CGFloat = 20
-    let stitchThickness: CGFloat = 2.5
-    let stitchOffset: CGFloat = 6 // How far stitches poke out
+    // Use a seed based on grid position for consistent randomness
+    let row: Int
+    let col: Int
+    
+    // Stitch configuration
+    let baseSpacing: CGFloat = 40
+    let spacingVariation: CGFloat = 4 // +/- variation in spacing
+    let rotationVariation: Double = 15 // +/- degrees of rotation
+    let stitchSize: CGFloat = 35
     
     var body: some View {
         GeometryReader { geo in
-            let width = geo.size.width
-            let height = geo.size.height
-            
-            Canvas { context, size in
-                // Draw stitching on each edge that has a neighbor
-                // Stitches are drawn pointing OUTWARD from the card
-                
+            ZStack {
+                // TOP edge stitches - this card is responsible for drawing the seam above it
                 if hasTopNeighbor {
-                    drawEdgeStitches(
-                        context: &context,
-                        along: .top,
-                        length: width,
-                        size: size
+                    EdgeStitches(
+                        edge: .top,
+                        length: geo.size.width,
+                        size: geo.size,
+                        seed: edgeSeed(forHorizontalEdgeAboveRow: row, col: col),
+                        baseSpacing: baseSpacing,
+                        spacingVariation: spacingVariation,
+                        rotationVariation: rotationVariation,
+                        stitchSize: stitchSize
                     )
                 }
                 
-                if hasBottomNeighbor {
-                    drawEdgeStitches(
-                        context: &context,
-                        along: .bottom,
-                        length: width,
-                        size: size
-                    )
-                }
-                
+                // LEFT edge stitches - this card is responsible for drawing the seam to its left
                 if hasLeftNeighbor {
-                    drawEdgeStitches(
-                        context: &context,
-                        along: .left,
-                        length: height,
-                        size: size
+                    EdgeStitches(
+                        edge: .left,
+                        length: geo.size.height,
+                        size: geo.size,
+                        seed: edgeSeed(forVerticalEdgeLeftOfCol: col, row: row),
+                        baseSpacing: baseSpacing,
+                        spacingVariation: spacingVariation,
+                        rotationVariation: rotationVariation,
+                        stitchSize: stitchSize
                     )
                 }
                 
-                if hasRightNeighbor {
-                    drawEdgeStitches(
-                        context: &context,
-                        along: .right,
-                        length: height,
-                        size: size
-                    )
-                }
+                // NOTE: We do NOT draw bottom or right edges
+                // Those will be drawn by the neighboring card's top/left edges
             }
         }
     }
     
+    // Generate a consistent seed for a horizontal edge (between two rows)
+    // This ensures the same seed is used regardless of which card draws it
+    private func edgeSeed(forHorizontalEdgeAboveRow row: Int, col: Int) -> Int {
+        // Edge above row R is identified by (row: R, col: C)
+        return row * 1000 + col * 100
+    }
+    
+    // Generate a consistent seed for a vertical edge (between two columns)
+    private func edgeSeed(forVerticalEdgeLeftOfCol col: Int, row: Int) -> Int {
+        // Edge left of col C is identified by (row: R, col: C) + offset to differentiate from horizontal
+        return row * 1000 + col * 100 + 50000
+    }
+}
+
+// MARK: - Edge Stitches
+// Draws stitches along a single edge
+
+struct EdgeStitches: View {
     enum Edge {
         case top, bottom, left, right
     }
     
-    private func drawEdgeStitches(context: inout GraphicsContext, along edge: Edge, length: CGFloat, size: CGSize) {
-        let numberOfStitches = Int(length / stitchSpacing)
-        let actualSpacing = length / CGFloat(numberOfStitches + 1)
+    let edge: Edge
+    let length: CGFloat
+    let size: CGSize
+    let seed: Int
+    let baseSpacing: CGFloat
+    let spacingVariation: CGFloat
+    let rotationVariation: Double
+    let stitchSize: CGFloat
+    
+    // Generate stitch positions with irregular spacing
+    private var stitchData: [(position: CGFloat, rotation: Double)] {
+        var result: [(CGFloat, Double)] = []
+        var currentPosition: CGFloat = baseSpacing
+        var index = 0
         
-        for i in 1...numberOfStitches {
-            let position = actualSpacing * CGFloat(i)
-            drawSingleStitch(context: &context, at: position, edge: edge, size: size)
+        while currentPosition < length - baseSpacing / 2 {
+            // Seeded pseudo-random for consistent results
+            let positionSeed = seed + index * 17
+            let rotationSeed = seed + index * 31
+            
+            // Irregular spacing: base spacing +/- variation
+            let spacingOffset = seededRandom(positionSeed) * spacingVariation * 2 - spacingVariation
+            
+            // Irregular rotation: +/- degrees
+            let rotation = seededRandom(rotationSeed) * rotationVariation * 2 - rotationVariation
+            
+            result.append((currentPosition, rotation))
+            
+            currentPosition += baseSpacing + spacingOffset
+            index += 1
+        }
+        
+        return result
+    }
+    
+    // Simple seeded random number generator (0.0 to 1.0)
+    private func seededRandom(_ seed: Int) -> Double {
+        let x = sin(Double(seed) * 12.9898) * 43758.5453
+        return x - floor(x)
+    }
+    
+    var body: some View {
+        ForEach(Array(stitchData.enumerated()), id: \.offset) { _, data in
+            SingleStitch(
+                edge: edge,
+                position: data.position,
+                rotation: data.rotation,
+                size: size,
+                stitchSize: stitchSize
+            )
+        }
+    }
+}
+
+// MARK: - Single Stitch
+// A single X-pattern stitch made of two crossed stitch images
+
+struct SingleStitch: View {
+    let edge: EdgeStitches.Edge
+    let position: CGFloat
+    let rotation: Double // Additional random rotation for irregularity
+    let size: CGSize
+    let stitchSize: CGFloat
+    
+    var body: some View {
+        ZStack {
+            // First diagonal of X
+            Image("stitch-1")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: stitchSize)
+                .rotationEffect(.degrees(baseRotation + 45 + rotation))
+            
+            // Second diagonal of X
+            Image("stitch-1")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: stitchSize)
+                .rotationEffect(.degrees(baseRotation - 45 + rotation))
+        }
+        .position(stitchPosition)
+    }
+    
+    // Base rotation depends on edge orientation
+    private var baseRotation: Double {
+        switch edge {
+        case .top, .bottom:
+            return 0 // X pattern for horizontal edges
+        case .left, .right:
+            return 90 // Rotate 90° for vertical edges
         }
     }
     
-    private func drawSingleStitch(context: inout GraphicsContext, at position: CGFloat, edge: Edge, size: CGSize) {
-        // Each stitch is an X pattern that crosses over the edge
-        // The stitch "pokes out" beyond the card boundary
-        
-        var path = Path()
-        
+    // Position the stitch centered on the edge
+    private var stitchPosition: CGPoint {
         switch edge {
         case .top:
-            // Stitch crosses the top edge, pointing upward (out of card)
-            // First diagonal of X
-            path.move(to: CGPoint(x: position - stitchLength/2, y: stitchOffset))
-            path.addLine(to: CGPoint(x: position + stitchLength/2, y: -stitchOffset))
-            // Second diagonal of X
-            path.move(to: CGPoint(x: position + stitchLength/2, y: stitchOffset))
-            path.addLine(to: CGPoint(x: position - stitchLength/2, y: -stitchOffset))
-            
+            return CGPoint(x: position, y: 0)
         case .bottom:
-            // Stitch crosses the bottom edge, pointing downward
-            let y = size.height
-            path.move(to: CGPoint(x: position - stitchLength/2, y: y - stitchOffset))
-            path.addLine(to: CGPoint(x: position + stitchLength/2, y: y + stitchOffset))
-            path.move(to: CGPoint(x: position + stitchLength/2, y: y - stitchOffset))
-            path.addLine(to: CGPoint(x: position - stitchLength/2, y: y + stitchOffset))
-            
+            return CGPoint(x: position, y: size.height)
         case .left:
-            // Stitch crosses the left edge, pointing leftward
-            path.move(to: CGPoint(x: stitchOffset, y: position - stitchLength/2))
-            path.addLine(to: CGPoint(x: -stitchOffset, y: position + stitchLength/2))
-            path.move(to: CGPoint(x: stitchOffset, y: position + stitchLength/2))
-            path.addLine(to: CGPoint(x: -stitchOffset, y: position - stitchLength/2))
-            
+            return CGPoint(x: 0, y: position)
         case .right:
-            // Stitch crosses the right edge, pointing rightward
-            let x = size.width
-            path.move(to: CGPoint(x: x - stitchOffset, y: position - stitchLength/2))
-            path.addLine(to: CGPoint(x: x + stitchOffset, y: position + stitchLength/2))
-            path.move(to: CGPoint(x: x - stitchOffset, y: position + stitchLength/2))
-            path.addLine(to: CGPoint(x: x + stitchOffset, y: position - stitchLength/2))
+            return CGPoint(x: size.width, y: position)
         }
-        
-        context.stroke(
-            path,
-            with: .color(stitchColor),
-            style: StrokeStyle(
-                lineWidth: stitchThickness,
-                lineCap: .round
-            )
-        )
     }
 }
 
@@ -342,11 +401,11 @@ struct StitchedTileCard: View {
                 hasTopNeighbor: hasTopNeighbor,
                 hasBottomNeighbor: hasBottomNeighbor,
                 hasLeftNeighbor: hasLeftNeighbor,
-                hasRightNeighbor: hasRightNeighbor
+                hasRightNeighbor: hasRightNeighbor,
+                row: row,
+                col: col
             )
         }
-        // Note: Not clipping - stitches extend into neighboring card space
-        // which creates the illusion of shared stitching
     }
 }
 
