@@ -28,15 +28,6 @@ struct RecipeDetailView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
                             
-                            // Map at the top
-                            RecipeMapView(
-                                latitude: recipe.latitude,
-                                longitude: recipe.longitude,
-                                locationName: recipe.locationName
-                            )
-                            .padding(.top, 20)
-                            .padding(.bottom, 24)
-                            
                             // Decorative title
                             DecorativeTitle(text: recipe.title ?? "Untitled")
                                 .padding(.top, 40)
