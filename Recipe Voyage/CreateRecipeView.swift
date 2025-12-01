@@ -1,5 +1,42 @@
 import SwiftUI
 
+// MARK: - Decorative Font Options
+struct DecorativeFontOption: Identifiable {
+    let id = UUID()
+    let name: String
+    let displayName: String
+    
+    static let options: [DecorativeFontOption] = [
+        DecorativeFontOption(name: "Didot", displayName: "Didot"),
+        DecorativeFontOption(name: "Baskerville", displayName: "Baskerville"),
+        DecorativeFontOption(name: "Bodoni 72", displayName: "Bodoni"),
+        DecorativeFontOption(name: "Copperplate", displayName: "Copperplate"),
+        DecorativeFontOption(name: "Snell Roundhand", displayName: "Snell Roundhand"),
+        DecorativeFontOption(name: "Zapfino", displayName: "Zapfino"),
+        DecorativeFontOption(name: "Cochin", displayName: "Cochin"),
+        DecorativeFontOption(name: "Palatino", displayName: "Palatino")
+    ]
+}
+
+// MARK: - Accent Color Options
+struct AccentColorOption: Identifiable {
+    let id = UUID()
+    let name: String
+    let hexColor: String
+    let color: Color
+    
+    static let options: [AccentColorOption] = [
+        AccentColorOption(name: "Classic Brown", hexColor: "#8B4513", color: Color(red: 0.545, green: 0.271, blue: 0.075)),
+        AccentColorOption(name: "Deep Burgundy", hexColor: "#800020", color: Color(red: 0.502, green: 0.0, blue: 0.125)),
+        AccentColorOption(name: "Forest Green", hexColor: "#228B22", color: Color(red: 0.133, green: 0.545, blue: 0.133)),
+        AccentColorOption(name: "Navy Blue", hexColor: "#000080", color: Color(red: 0.0, green: 0.0, blue: 0.502)),
+        AccentColorOption(name: "Royal Purple", hexColor: "#6B3FA0", color: Color(red: 0.420, green: 0.247, blue: 0.627)),
+        AccentColorOption(name: "Burnt Orange", hexColor: "#CC5500", color: Color(red: 0.8, green: 0.333, blue: 0.0)),
+        AccentColorOption(name: "Olive Green", hexColor: "#556B2F", color: Color(red: 0.333, green: 0.420, blue: 0.184)),
+        AccentColorOption(name: "Charcoal", hexColor: "#36454F", color: Color(red: 0.212, green: 0.271, blue: 0.310))
+    ]
+}
+
 // MARK: - Create Recipe View
 // WYSIWYG editor that mirrors the recipe detail view layout
 // Users edit the interface directly, not through a form
@@ -20,6 +57,8 @@ struct CreateRecipeView: View {
     @State private var steps: [EditableStep] = []
     @State private var ancestrySteps: [EditableAncestry] = []
     @State private var draggedAncestry: EditableAncestry?
+    @State private var selectedDecorativeFont: String = DecorativeFontOption.options[0].name
+    @State private var selectedAccentColor: String = AccentColorOption.options[0].hexColor
     
     // Audio recording
     @State private var recordedFileName: String?
@@ -41,6 +80,11 @@ struct CreateRecipeView: View {
         !title.isEmpty || !description.isEmpty || !ingredients.isEmpty || !steps.isEmpty || recordedFileName != nil
     }
     
+    // Get the current accent color
+    private var currentAccentColor: Color {
+        Color(hex: selectedAccentColor) ?? Color.brown
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -49,17 +93,43 @@ struct CreateRecipeView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Editable ancestry timeline at top
-                    editableAncestryTimeline
-                        .padding(.top, geometry.safeAreaInsets.top + 50)
                     
                     // Main content area
                     if isLandscape {
                         HStack(alignment: .top, spacing: 0) {
                             // Recipe content editor
                             ScrollView {
-                                recipeEditorContent
-                                    .padding(.bottom, 120)
+                                VStack(spacing: 20) {
+                                    // History Block
+                                    VStack(spacing: 16) {
+                                        Text("HISTORY")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.brown.opacity(0.6))
+                                            .tracking(1)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        
+                                        editableAncestryTimelineCompact
+                                    }
+                                    .padding(20)
+                                    .background(Color.white.opacity(0.5))
+                                    .cornerRadius(16)
+                                    
+                                    // Recipe Block
+                                    VStack(spacing: 16) {
+                                        Text("RECIPE")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.brown.opacity(0.6))
+                                            .tracking(1)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        
+                                        recipeEditorContent
+                                    }
+                                    .padding(20)
+                                    .background(Color.white.opacity(0.5))
+                                    .cornerRadius(16)
+                                }
+                                .padding(20)
+                                .padding(.bottom, 120)
                             }
                             .frame(width: geometry.size.width * (isLandscapeiPad ? 0.7 : 0.65))
                             
@@ -72,10 +142,71 @@ struct CreateRecipeView: View {
                         // Portrait layout
                         ScrollView {
                             VStack(spacing: 24) {
-                                recipeEditorContent
+                                Spacer()
+                                    .frame(height: 70)
+                                // Recipe Content Block
+                                VStack(spacing: 16) {
+                                    Text("RECIPE")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.brown.opacity(0.6))
+                                        .tracking(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 20)
+                                    
+                                    recipeEditorContent
+                                }
+                                .padding(.vertical, 20)
+                                .background(Color.white.opacity(0.5))
+                                .cornerRadius(16)
+                                .padding(.horizontal, 16)
                                 
-                                // Audio recording section
-                                audioRecordingSection
+                                // History Block
+                                VStack(spacing: 16) {
+                                    Text("HISTORY")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.brown.opacity(0.6))
+                                        .tracking(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 20)
+                                    
+                                    editableAncestryTimelineCompact
+                                }
+                                .padding(.vertical, 20)
+                                .background(Color.white.opacity(0.5))
+                                .cornerRadius(16)
+                                .padding(.horizontal, 16)
+                                
+                                // Recording Block
+                                VStack(spacing: 16) {
+                                    Text("RECORDING")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.brown.opacity(0.6))
+                                        .tracking(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 20)
+                                    
+                                    audioRecorderWidget
+                                }
+                                .padding(.vertical, 20)
+                                .background(Color.white.opacity(0.5))
+                                .cornerRadius(16)
+                                .padding(.horizontal, 16)
+                                
+                                // Customization Block
+                                VStack(spacing: 16) {
+                                    Text("CUSTOMIZATION")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.brown.opacity(0.6))
+                                        .tracking(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 20)
+                                    
+                                    combinedCustomizationPicker
+                                }
+                                .padding(.vertical, 20)
+                                .background(Color.white.opacity(0.5))
+                                .cornerRadius(16)
+                                .padding(.horizontal, 16)
                             }
                             .padding(.bottom, 100)
                         }
@@ -144,16 +275,6 @@ struct CreateRecipeView: View {
         VStack(spacing: 0) {
             ancestryTimelineContent
         }
-//        .background {
-//            LinearGradient(
-//                gradient: Gradient(colors: [
-//                    Color.brown.opacity(0.15),
-//                    Color.brown.opacity(0.08)
-//                ]),
-//                startPoint: .top,
-//                endPoint: .bottom
-//            )
-//        }
     }
     
     private var ancestryTimelineContent: some View {
@@ -247,7 +368,6 @@ struct CreateRecipeView: View {
             TextField("Recipe Title", text: $title)
                 .font(.system(size: isLandscapeiPad ? 32 : 26, weight: .bold))
                 .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-                .padding(.top, 16)
             
             // Description field
             ZStack(alignment: .topLeading) {
@@ -347,33 +467,53 @@ struct CreateRecipeView: View {
     // MARK: - Audio Recording Sidebar (Landscape)
     
     private func audioRecordingSidebar(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 20) {
-            Text("Voice Recording")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-                .padding(.top, 16)
-            
-            Spacer()
-            
-            audioRecorderWidget
-            
-            Spacer()
+        ScrollView {
+            VStack(spacing: 20) {
+                // Recording Block
+                VStack(spacing: 16) {
+                    Text("RECORDING")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.brown.opacity(0.6))
+                        .tracking(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    audioRecorderWidget
+                }
+                .padding(20)
+                .background(Color.white.opacity(0.5))
+                .cornerRadius(16)
+                
+                // Customization Block
+                VStack(spacing: 16) {
+                    Text("CUSTOMIZATION")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.brown.opacity(0.6))
+                        .tracking(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    combinedCustomizationPicker
+                }
+                .padding(20)
+                .background(Color.white.opacity(0.5))
+                .cornerRadius(16)
+            }
+            .padding(20)
         }
-        .padding(.horizontal, 20)
     }
     
-    // MARK: - Audio Recording Section (Portrait)
+    // MARK: - Compact Ancestry Timeline
     
-    private var audioRecordingSection: some View {
-        VStack(spacing: 16) {
-            Divider()
+    private var editableAncestryTimelineCompact: some View {
+        VStack(spacing: 12) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(ancestrySteps.enumerated()), id: \.element.id) { index, step in
+                        ancestryCardRow(for: step, at: index)
+                    }
+                    addOriginButton
+                }
                 .padding(.horizontal, 20)
-            
-            Text("Voice Recording")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-            
-            audioRecorderWidget
+            }
         }
     }
     
@@ -457,7 +597,6 @@ struct CreateRecipeView: View {
                 .fill(Color.white)
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
         )
-        .padding(.horizontal, 20)
     }
     
     private func toggleRecording() {
@@ -472,6 +611,117 @@ struct CreateRecipeView: View {
             // Delete previous recording if any
             recordedFileName = audioManager.startRecording()
             isRecording = true
+        }
+    }
+    
+    // MARK: - Combined Customization Picker
+    
+    private var combinedCustomizationPicker: some View {
+        VStack(spacing: 20) {
+            // Preview
+            if let firstLetter = title.first {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                    
+                    Text(String(firstLetter).uppercased())
+                        .font(.custom(selectedDecorativeFont, size: 72))
+                        .foregroundColor(currentAccentColor)
+                }
+                .frame(width: 120, height: 120)
+            }
+            
+            // Font selector
+            VStack(spacing: 12) {
+                Text("Font Style")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(DecorativeFontOption.options) { option in
+                            VStack(spacing: 8) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(selectedDecorativeFont == option.name ? currentAccentColor.opacity(0.1) : Color.white)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(selectedDecorativeFont == option.name ? currentAccentColor : Color.gray.opacity(0.3), lineWidth: selectedDecorativeFont == option.name ? 3 : 1)
+                                        )
+                                    
+                                    Text(String(title.first ?? "A").uppercased())
+                                        .font(.custom(option.name, size: 48))
+                                        .foregroundColor(currentAccentColor)
+                                }
+                                .frame(width: 80, height: 80)
+                                
+                                Text(option.displayName)
+                                    .font(.system(size: 12, weight: selectedDecorativeFont == option.name ? .semibold : .regular))
+                                    .foregroundColor(selectedDecorativeFont == option.name ? currentAccentColor : .gray)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3)) {
+                                    selectedDecorativeFont = option.name
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+            
+            // Color selector
+            VStack(spacing: 12) {
+                Text("Accent Color")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(AccentColorOption.options) { option in
+                            VStack(spacing: 8) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(option.color)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(selectedAccentColor == option.hexColor ? Color.black : Color.clear, lineWidth: 3)
+                                        )
+                                    
+                                    if selectedAccentColor == option.hexColor {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 24))
+                                            .foregroundColor(.white)
+                                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                    }
+                                }
+                                .frame(width: 60, height: 60)
+                                
+                                Text(option.name)
+                                    .font(.system(size: 11, weight: selectedAccentColor == option.hexColor ? .semibold : .regular))
+                                    .foregroundColor(selectedAccentColor == option.hexColor ? Color(red: 0.3, green: 0.2, blue: 0.1) : .gray)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.center)
+                                    .frame(width: 80)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3)) {
+                                    selectedAccentColor = option.hexColor
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
         }
     }
     
@@ -494,7 +744,11 @@ struct CreateRecipeView: View {
             }
             .disabled(title.isEmpty)
             .padding(.horizontal, 20)
-            .padding(.bottom, geometry.safeAreaInsets.bottom + 16)
+            .padding(.bottom, max(geometry.safeAreaInsets.bottom, 16) + 16)
+            .background(
+                Color(red: 0.98, green: 0.97, blue: 0.94)
+                    .ignoresSafeArea(edges: .bottom)
+            )
         }
     }
     
@@ -508,9 +762,12 @@ struct CreateRecipeView: View {
         let recipe = dataManager.createRecipe(
             title: title,
             symbol: "fork.knife",
-            color: "#8B4513",
+            color: selectedAccentColor,
             description: description
         )
+        
+        // Set the decorative font
+        recipe.decorativeCapFont = selectedDecorativeFont
         
         // Add ingredients
         for ingredient in ingredients where !ingredient.name.isEmpty {
@@ -539,6 +796,7 @@ struct CreateRecipeView: View {
             dataManager.addAudioNote(to: recipe, fileName: fileName, duration: recordedDuration)
         }
         
+        dataManager.saveContext()
         dismiss()
     }
 }

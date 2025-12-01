@@ -34,19 +34,47 @@ struct RecipeDetailView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Compact ancestry timeline at top
-                    if !recipe.ancestryStepsArray.isEmpty {
-                        compactAncestryTimeline
-                            .padding(.top, geometry.safeAreaInsets.top + 50)
-                    }
-                    
                     // Main content area
                     if isLandscape {
                         // Landscape: Recipe on left, Photos on right
                         HStack(alignment: .top, spacing: 0) {
                             // Recipe content (scrollable)
-                            recipeContent
-                                .frame(width: geometry.size.width * (isLandscapeiPad ? 0.7 : 0.65))
+                            ScrollView {
+                                VStack(spacing: 20) {
+                                    // History Block
+                                    if !recipe.ancestryStepsArray.isEmpty {
+                                        VStack(spacing: 16) {
+                                            Text("HISTORY")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundColor(.brown.opacity(0.6))
+                                                .tracking(1)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                            
+                                            compactAncestryTimelineContent
+                                        }
+                                        .padding(20)
+                                        .background(Color.white.opacity(0.5))
+                                        .cornerRadius(16)
+                                    }
+                                    
+                                    // Recipe Block
+                                    VStack(spacing: 16) {
+                                        Text("RECIPE")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.brown.opacity(0.6))
+                                            .tracking(1)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        
+                                        recipeContentBody
+                                    }
+                                    .padding(20)
+                                    .background(Color.white.opacity(0.5))
+                                    .cornerRadius(16)
+                                }
+                                .padding(20)
+                                .padding(.bottom, 100)
+                            }
+                            .frame(width: geometry.size.width * (isLandscapeiPad ? 0.7 : 0.65))
                             
                             Divider()
                             
@@ -57,7 +85,41 @@ struct RecipeDetailView: View {
                         // Portrait: Recipe content with photos below or overlaid
                         ScrollView {
                             VStack(spacing: 20) {
-                                recipeContentBody
+                                Spacer()
+                                    .frame(height: 70)
+                                // History Block
+                                if !recipe.ancestryStepsArray.isEmpty {
+                                    VStack(spacing: 16) {
+                                        Text("HISTORY")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.brown.opacity(0.6))
+                                            .tracking(1)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.horizontal, 20)
+                                        
+                                        compactAncestryTimelineContent
+                                    }
+                                    .padding(.vertical, 20)
+                                    .background(Color.white.opacity(0.5))
+                                    .cornerRadius(16)
+                                    .padding(.horizontal, 16)
+                                }
+                                
+                                // Recipe Block
+                                VStack(spacing: 16) {
+                                    Text("RECIPE")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.brown.opacity(0.6))
+                                        .tracking(1)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 20)
+                                    
+                                    recipeContentBody
+                                }
+                                .padding(.vertical, 20)
+                                .background(Color.white.opacity(0.5))
+                                .cornerRadius(16)
+                                .padding(.horizontal, 16)
                                 
                                 // Photos section in portrait
                                 photosSection
@@ -102,7 +164,7 @@ struct RecipeDetailView: View {
     
     // MARK: - Compact Ancestry Timeline
     
-    private var compactAncestryTimeline: some View {
+    private var compactAncestryTimelineContent: some View {
         HStack(spacing: 0) {
             // Play/Pause button on the left (if audio exists)
             if let audioNote = recipe.primaryAudioNote,
@@ -134,10 +196,6 @@ struct RecipeDetailView: View {
                                 HStack(spacing: 10) {
                                     // Country (always shown)
                                     VStack(alignment: .leading, spacing: 2) {
-//                                        Text("Country")
-//                                            .font(.system(size: 10, weight: .medium))
-//                                            .foregroundColor(.gray.opacity(0.7))
-                                        
                                         Text(step.country ?? "Unknown")
                                             .font(.system(size: 17, weight: .bold))
                                             .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
@@ -149,10 +207,6 @@ struct RecipeDetailView: View {
                                             .frame(height: 30)
                                         
                                         VStack(alignment: .leading, spacing: 2) {
-//                                            Text("Region")
-//                                                .font(.system(size: 10, weight: .medium))
-//                                                .foregroundColor(.gray.opacity(0.7))
-//                                            
                                             Text(region)
                                                 .font(.system(size: 15, weight: .semibold))
                                                 .foregroundColor(.brown.opacity(0.8))
@@ -165,10 +219,6 @@ struct RecipeDetailView: View {
                                     Divider()
                                     
                                     VStack(alignment: .leading, spacing: 2) {
-//                                        Text("Date")
-//                                            .font(.system(size: 10, weight: .medium))
-//                                            .foregroundColor(.gray.opacity(0.7))
-                                        
                                         Text(date)
                                             .font(.system(size: 13))
                                             .foregroundColor(.gray)
@@ -181,10 +231,6 @@ struct RecipeDetailView: View {
                                     Divider()
                                     
                                     VStack(alignment: .leading, spacing: 2) {
-//                                        Text("Note")
-//                                            .font(.system(size: 10, weight: .medium))
-//                                            .foregroundColor(.gray.opacity(0.7))
-                                        
                                         Text(note)
                                             .font(.system(size: 12))
                                             .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
@@ -229,22 +275,12 @@ struct RecipeDetailView: View {
         )
     }
     
-    // MARK: - Recipe Content (Scrollable in Landscape)
-    
-    private var recipeContent: some View {
-        ScrollView {
-            recipeContentBody
-                .padding(.bottom, 100) // Space for audio player
-        }
-    }
+
     
     private var recipeContentBody: some View {
         VStack(alignment: .leading, spacing: 24) {
-            // Title
-            Text(recipe.title ?? "Untitled Recipe")
-                .font(.system(size: isLandscapeiPad ? 32 : 26, weight: .bold))
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-                .padding(.top, recipe.ancestryStepsArray.isEmpty ? 60 : 16)
+            // Title with decorative capital letter
+            titleWithDecorativeCap
             
             // Description
             if let description = recipe.recipeDescription, !description.isEmpty {
@@ -307,7 +343,37 @@ struct RecipeDetailView: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Title with Decorative Capital
+    
+    private var titleWithDecorativeCap: some View {
+        let title = recipe.title ?? "Untitled Recipe"
+        let fontName = recipe.decorativeCapFont ?? "Didot"
+        let accentColor = Color(hex: recipe.colorHex ?? "#8B4513") ?? Color.brown
+        
+        return HStack(alignment: .top, spacing: 8) {
+            if let firstChar = title.first {
+                // Decorative capital letter
+                Text(String(firstChar).uppercased())
+                    .font(.custom(fontName, size: isLandscapeiPad ? 72 : 64))
+                    .foregroundColor(accentColor)
+                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 2)
+                
+                // Rest of the title
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(title.dropFirst()))
+                        .font(.system(size: isLandscapeiPad ? 32 : 26, weight: .bold))
+                        .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                }
+                .padding(.top, isLandscapeiPad ? 12 : 8)
+            } else {
+                Text(title)
+                    .font(.system(size: isLandscapeiPad ? 32 : 26, weight: .bold))
+                    .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+            }
+        }
+        .padding(.top, recipe.ancestryStepsArray.isEmpty ? 60 : 16)
     }
     
     // MARK: - Photos Sidebar (Landscape)

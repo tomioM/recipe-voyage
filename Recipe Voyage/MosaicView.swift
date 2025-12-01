@@ -708,7 +708,7 @@ struct AnimatedSingleStitch: View {
 }
 
 // MARK: - Mosaic Recipe Card
-// New design: Two-column layout with decorative capital and owner info
+// Index card texture with accent color tint
 
 struct MosaicRecipeCard: View {
     let recipe: RecipeEntity
@@ -717,89 +717,78 @@ struct MosaicRecipeCard: View {
     let isBeingDragged: Bool
     let roundedCorners: UIRectCorner
     
-    // Calculate column widths (1:4 ratio)
-    private var leftColumnWidth: CGFloat { width * 0.2 }
-    private var rightColumnWidth: CGFloat { width * 0.8 }
+    // Calculate column widths (1:3 ratio)
+    private var leftColumnWidth: CGFloat { width * 0.33 }
+    private var rightColumnWidth: CGFloat { width * 0.67 }
     
     // Extract first letter for decorative capital
     private var firstLetter: String {
         String((recipe.title ?? "R").prefix(1)).uppercased()
     }
     
+    // Get accent color
+    private var accentColor: Color {
+        Color(hex: recipe.colorHex ?? "#8B4513") ?? .brown
+    }
+    
     var body: some View {
         ZStack {
-            // Background with color tint
-            // TODO: Replace with background texture image + color tint
-            // Background should be a subtle paper/parchment texture
-            // that gets tinted with the recipe's color (NOT owner color)
-            RoundedCornerShape(corners: roundedCorners, radius: 12)
-                .fill(backgroundColor)
+            // Index card texture background
+            Image("index-card")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: width, height: height)
+                .clipped()
             
-            // TODO: Add decorative border image overlay
-            // Border should be a separate image that frames the card
-            // with vintage/ornate styling
+            // Accent color tint
             RoundedCornerShape(corners: roundedCorners, radius: 12)
-                .stroke(Color.brown.opacity(0.3), lineWidth: 2)
+                .fill(accentColor.opacity(0.15))
             
             // Card content
-            VStack(spacing: 0) {
-                // Main content area (two columns)
-                HStack(alignment: .top, spacing: 0) {
-                    // LEFT COLUMN: Decorative capital letter (1/5 width)
-                    decorativeCapitalColumn
-                        .frame(width: leftColumnWidth)
+            HStack(spacing: 0) {
+                // LEFT COLUMN: Decorative capital
+                VStack {
+                    Spacer()
                     
-                    // RIGHT COLUMN: Recipe title (4/5 width)
-                    titleColumn
-                        .frame(width: rightColumnWidth)
+                    Text(firstLetter)
+                        .font(.custom(recipe.decorativeCapFont ?? "Didot", size: min(width, height) * 0.35))
+                        .foregroundColor(accentColor)
+                    
+                    Spacer()
                 }
-                .frame(maxHeight: .infinity)
+                .frame(width: leftColumnWidth)
                 
-                Spacer()
-                
-                // BOTTOM: Owner info line
-                ownerInfoLine
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 8)
+                // RIGHT COLUMN: Title
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Spacer()
+                        
+                        Text(recipe.title ?? "Untitled")
+                            .font(.system(size: fontSize, weight: .semibold))
+                            .foregroundColor(.black)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(3)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .frame(maxHeight: .infinity)
+                    
+                    // BOTTOM: Owner info line
+                    ownerInfoLine
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 8)
+                }
+                .frame(width: rightColumnWidth)
             }
-            .padding(.top, 12)
+            
+            // Border
+            RoundedCornerShape(corners: roundedCorners, radius: 12)
+                .stroke(accentColor.opacity(0.4), lineWidth: 2)
         }
         .frame(width: width, height: height)
-    }
-    
-    // MARK: - Decorative Capital Column
-    
-    private var decorativeCapitalColumn: some View {
-        VStack {
-            Spacer()
-            
-            // TODO: Replace with decorative capital image
-            // Should be an ornate, vintage-style capital letter
-            // For now, using text as placeholder
-            Text(firstLetter)
-                .font(.custom("Georgia-Bold", size: min(width, height) * 0.25))
-                .foregroundColor(decorativeCapitalColor)
-            
-            Spacer()
-        }
-    }
-    
-    // MARK: - Title Column
-    
-    private var titleColumn: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Spacer()
-            
-            Text(recipe.title ?? "Untitled")
-                .font(.custom("Georgia", size: fontSize))
-                .fontWeight(.medium)
-                .multilineTextAlignment(.leading)
-                .lineLimit(3)
-                .foregroundColor(textColor)
-                .padding(.trailing, 8)
-            
-            Spacer()
-        }
     }
     
     // MARK: - Owner Info Line
@@ -812,7 +801,7 @@ struct MosaicRecipeCard: View {
                 Image(photoName)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 24, height: 24)
+                    .frame(width: 20, height: 20)
                     .clipShape(Circle())
                     .overlay(
                         Circle()
@@ -822,18 +811,18 @@ struct MosaicRecipeCard: View {
                 // Placeholder profile photo
                 Circle()
                     .fill(Color.brown.opacity(0.2))
-                    .frame(width: 24, height: 24)
+                    .frame(width: 20, height: 20)
                     .overlay(
                         Image(systemName: "person.fill")
-                            .font(.system(size: 12))
+                            .font(.system(size: 10))
                             .foregroundColor(.brown.opacity(0.5))
                     )
             }
             
-            // Owner name - display "Personal Recipe" if owner name is exactly "self"
+            // Owner name
             Text(displayOwnerName)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.black.opacity(0.6))
             
             Spacer()
             
@@ -841,11 +830,11 @@ struct MosaicRecipeCard: View {
             if !recipe.audioNotesArray.isEmpty {
                 HStack(spacing: 3) {
                     Image(systemName: "waveform")
-                        .font(.system(size: 9))
+                        .font(.system(size: 8))
                     Text("\(recipe.audioNotesArray.count)")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 8, weight: .medium))
                 }
-                .foregroundColor(.brown.opacity(0.5))
+                .foregroundColor(.black.opacity(0.5))
             }
         }
     }
@@ -857,35 +846,8 @@ struct MosaicRecipeCard: View {
         return ownerName == "self" ? "Personal Recipe" : ownerName
     }
     
-    private var backgroundColor: Color {
-        // Use bgColorHex for background tinting
-        if let bgColorHex = recipe.bgColorHex {
-            return (Color(hex: bgColorHex) ?? Color(red: 0.96, green: 0.95, blue: 0.92)).opacity(0.15)
-        } else {
-            return Color(red: 0.96, green: 0.95, blue: 0.92)
-        }
-    }
-    
-    private var textColor: Color {
-        // Use colorHex for text color
-        if let colorHex = recipe.colorHex {
-            return Color(hex: colorHex) ?? Color(red: 0.3, green: 0.2, blue: 0.1)
-        } else {
-            return Color(red: 0.3, green: 0.2, blue: 0.1)
-        }
-    }
-    
-    private var decorativeCapitalColor: Color {
-        // Use colorHex for decorative capital
-        if let colorHex = recipe.colorHex {
-            return Color(hex: colorHex) ?? .brown
-        } else {
-            return .brown
-        }
-    }
-    
     private var fontSize: CGFloat {
-        min(16, min(width, height) * 0.12)
+        min(18, min(width, height) * 0.14)
     }
 }
 
@@ -899,97 +861,88 @@ struct InboxRecipeCard: View {
     private var cardWidth: CGFloat { compact ? 140 : 220 }
     private var cardHeight: CGFloat { compact ? 100 : 140 }
     
-    // Calculate column widths (1:4 ratio, same as mosaic card)
-    private var leftColumnWidth: CGFloat { cardWidth * 0.2 }
-    private var rightColumnWidth: CGFloat { cardWidth * 0.8 }
+    // Calculate column widths (1:3 ratio)
+    private var leftColumnWidth: CGFloat { cardWidth * 0.33 }
+    private var rightColumnWidth: CGFloat { cardWidth * 0.67 }
     
     // Extract first letter for decorative capital
     private var firstLetter: String {
         String((recipe.title ?? "R").prefix(1)).uppercased()
     }
     
+    // Get accent color
+    private var accentColor: Color {
+        Color(hex: recipe.colorHex ?? "#8B4513") ?? .brown
+    }
+    
     var body: some View {
         ZStack {
-            // Background with color tint (using bgColorHex)
-            RoundedRectangle(cornerRadius: 12)
-                .fill(backgroundColor)
+            // Index card texture background
+            Image("index-card")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: cardWidth, height: cardHeight)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             
-            // Border
+            // Accent color tint
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.brown.opacity(0.3), lineWidth: 1.5)
+                .fill(accentColor.opacity(0.15))
             
             // Card content
-            VStack(spacing: 0) {
-                // Main content area (two columns)
-                HStack(alignment: .top, spacing: 0) {
-                    // LEFT COLUMN: Decorative capital letter (1/5 width)
-                    VStack {
-                        Spacer()
-                        Text(firstLetter)
-                            .font(.custom("Georgia-Bold", size: compact ? 28 : 35))
-                            .foregroundColor(textColor)
-                        Spacer()
-                    }
-                    .frame(width: leftColumnWidth)
+            HStack(spacing: 0) {
+                // LEFT COLUMN: Decorative capital
+                VStack {
+                    Spacer()
                     
-                    // RIGHT COLUMN: Recipe title (4/5 width)
+                    Text(firstLetter)
+                        .font(.custom(recipe.decorativeCapFont ?? "Didot", size: compact ? 35 : 45))
+                        .foregroundColor(accentColor)
+                    
+                    Spacer()
+                }
+                .frame(width: leftColumnWidth)
+                
+                // RIGHT COLUMN: Title
+                VStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 4) {
                         Spacer()
                         
                         Text(recipe.title ?? "Untitled")
-                            .font(.custom("Georgia", size: compact ? 11 : 13))
-                            .fontWeight(.medium)
+                            .font(.system(size: compact ? 13 : 15, weight: .semibold))
+                            .foregroundColor(.black)
                             .multilineTextAlignment(.leading)
                             .lineLimit(compact ? 2 : 3)
-                            .foregroundColor(textColor)
-                            .padding(.trailing, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         
                         Spacer()
                     }
-                    .frame(width: rightColumnWidth)
-                }
-                .frame(maxHeight: .infinity)
-                
-                Spacer()
-                
-                // BOTTOM: Sender info line
-                HStack(spacing: 6) {
-                    Image(systemName: "envelope.open")
-                        .font(.system(size: compact ? 8 : 10))
-                        .foregroundColor(.brown.opacity(0.5))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(maxHeight: .infinity)
                     
-                    Text(recipe.senderName ?? "Unknown")
-                        .font(.system(size: compact ? 8 : 10, weight: .medium))
-                        .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
-                    
-                    Spacer()
+                    // BOTTOM: Sender info line
+                    HStack(spacing: 4) {
+                        Image(systemName: "envelope.open")
+                            .font(.system(size: compact ? 7 : 9))
+                            .foregroundColor(.black.opacity(0.5))
+                        
+                        Text(recipe.senderName ?? "Unknown")
+                            .font(.system(size: compact ? 7 : 9, weight: .medium))
+                            .foregroundColor(.black.opacity(0.6))
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 6)
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 6)
+                .frame(width: rightColumnWidth)
             }
-            .padding(.top, 8)
+            
+            // Border
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(accentColor.opacity(0.4), lineWidth: 1.5)
         }
         .frame(width: cardWidth, height: cardHeight)
-    }
-    
-    // MARK: - Computed Properties
-    
-    private var backgroundColor: Color {
-        // Use bgColorHex for background tinting
-        if let bgColorHex = recipe.bgColorHex {
-            return (Color(hex: bgColorHex) ?? Color(red: 0.96, green: 0.95, blue: 0.92)).opacity(0.15)
-        } else {
-            return Color(red: 0.96, green: 0.95, blue: 0.92)
-        }
-    }
-    
-    private var textColor: Color {
-        // Use colorHex for text color
-        if let colorHex = recipe.colorHex {
-            return Color(hex: colorHex) ?? Color(red: 0.3, green: 0.2, blue: 0.1)
-        } else {
-            return Color(red: 0.3, green: 0.2, blue: 0.1)
-        }
     }
 }
 
