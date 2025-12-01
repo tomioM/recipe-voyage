@@ -28,6 +28,13 @@ struct RecipeDetailView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
                             
+                            // Ancestry Timeline at the top
+                            if !recipe.ancestryStepsArray.isEmpty {
+                                RecipeAncestryTimeline(ancestrySteps: recipe.ancestryStepsArray)
+                                    .padding(.top, 20)
+                                    .padding(.bottom, 24)
+                            }
+                            
                             // Decorative title
                             DecorativeTitle(text: recipe.title ?? "Untitled")
                                 .padding(.top, 40)

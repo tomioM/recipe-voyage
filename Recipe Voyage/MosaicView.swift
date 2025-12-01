@@ -159,6 +159,52 @@ struct MosaicView: View {
             description: "A family favorite passed down through generations."
         )
         
+        // Add ancestry timeline
+        dataManager.addAncestryStep(
+            to: recipe,
+            country: "Italy",
+            region: "Sicily",
+            roughDate: "1890s",
+            note: "Original family recipe from great-great-grandmother Maria",
+            generation: 1
+        )
+
+        dataManager.addAncestryStep(
+            to: recipe,
+            country: "Canada",
+            region: "Montreal, QC",
+            roughDate: "1920s",
+            note: "Adapted when family immigrated, using Canadian butter",
+            generation: 2
+        )
+
+        dataManager.addAncestryStep(
+            to: recipe,
+            country: "Canada",
+            region: "Ottawa, ON",
+            roughDate: "1950s",
+            note: "Grandmother added maple syrup",
+            generation: 3
+        )
+
+        dataManager.addAncestryStep(
+            to: recipe,
+            country: "Canada",
+            region: "Toronto, ON",
+            roughDate: "1980s",
+            note: "Mom's version with chocolate chips",
+            generation: 4
+        )
+
+        dataManager.addAncestryStep(
+            to: recipe,
+            country: "Canada",
+            region: "Ottawa, ON",
+            roughDate: "2024",
+            note: "My recipe today",
+            generation: 5
+        )
+        
         dataManager.addIngredient(to: recipe, name: "All-purpose flour", quantity: "2 cups")
         dataManager.addIngredient(to: recipe, name: "Sugar", quantity: "1 cup")
         dataManager.addIngredient(to: recipe, name: "Butter", quantity: "1 stick")

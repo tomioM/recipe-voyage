@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788.4" systemVersion="24G90" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AncestryStepEntity" representedClassName="AncestryStepEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="country" optional="YES" attributeType="String"/>
+        <attribute name="generation" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="note" optional="YES" attributeType="String"/>
+        <attribute name="region" optional="YES" attributeType="String"/>
+        <attribute name="roughDate" optional="YES" attributeType="String"/>
+        <attribute name="sortOrder" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="recipe" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="RecipeEntity" inverseName="ancestrySteps" inverseEntity="RecipeEntity"/>
+    </entity>
     <entity name="AudioNoteEntity" representedClassName="AudioNoteEntity" syncable="YES" codeGenerationType="class">
         <attribute name="audioFileName" optional="YES" attributeType="String"/>
         <attribute name="createdDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -28,9 +38,10 @@
         <attribute name="sortOrder" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="symbol" optional="YES" attributeType="String"/>
         <attribute name="title" optional="YES" attributeType="String"/>
-        <relationship name="audioNotes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AudioNoteEntity" inverseName="recipe" inverseEntity="AudioNoteEntity"/>
-        <relationship name="ingredients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="IngredientEntity" inverseName="recipe" inverseEntity="IngredientEntity"/>
-        <relationship name="steps" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="StepEntity" inverseName="recipe" inverseEntity="StepEntity"/>
+        <relationship name="ancestrySteps" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="AncestryStepEntity" inverseName="recipe" inverseEntity="AncestryStepEntity"/>
+        <relationship name="audioNotes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="AudioNoteEntity" inverseName="recipe" inverseEntity="AudioNoteEntity"/>
+        <relationship name="ingredients" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="IngredientEntity" inverseName="recipe" inverseEntity="IngredientEntity"/>
+        <relationship name="steps" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="StepEntity" inverseName="recipe" inverseEntity="StepEntity"/>
     </entity>
     <entity name="StepEntity" representedClassName="StepEntity" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>

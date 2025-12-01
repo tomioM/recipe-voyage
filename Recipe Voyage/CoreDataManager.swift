@@ -214,6 +214,28 @@ class CoreDataManager: ObservableObject {
         print("📍 Removed location")
     }
     
+    // MARK: - Ancestry Steps
+    // Add an ancestry step to a recipe's timeline
+    func addAncestryStep(to recipe: RecipeEntity, country: String, region: String?, roughDate: String?, note: String?, generation: Int16?) {
+        let ancestryStep = AncestryStepEntity(context: container.viewContext)
+        ancestryStep.id = UUID()
+        ancestryStep.country = country
+        ancestryStep.region = region
+        ancestryStep.roughDate = roughDate
+        ancestryStep.note = note
+        ancestryStep.generation = generation ?? 0
+        ancestryStep.sortOrder = Int16((recipe.ancestrySteps?.count ?? 0))
+        ancestryStep.recipe = recipe
+        
+        saveContext()
+        print("🌍 Added ancestry step: \(country)")
+    }
+    
+    func deleteAncestryStep(_ step: AncestryStepEntity) {
+        container.viewContext.delete(step)
+        saveContext()
+    }
+    
     // MARK: - Private Helpers
     // Save changes to database
     private func saveContext() {
@@ -256,6 +278,12 @@ extension RecipeEntity {
         return set.sorted {
             ($0.createdDate ?? Date()) > ($1.createdDate ?? Date())
         }
+    }
+    
+    // Get ancestry steps, sorted by order (oldest to newest)
+    var ancestryStepsArray: [AncestryStepEntity] {
+        let set = ancestrySteps as? Set<AncestryStepEntity> ?? []
+        return set.sorted { $0.sortOrder < $1.sortOrder }
     }
     
     // Convert hex color string to SwiftUI Color
