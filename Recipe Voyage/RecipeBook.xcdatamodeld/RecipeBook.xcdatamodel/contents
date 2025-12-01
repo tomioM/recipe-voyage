@@ -27,6 +27,7 @@
     <entity name="OwnerEntity" representedClassName="OwnerEntity" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="profilePhotoName" optional="YES" attributeType="String"/>
         <attribute name="relationship" optional="YES" attributeType="String"/>
         <relationship name="recipe" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="RecipeEntity" inverseName="owner" inverseEntity="RecipeEntity"/>
     </entity>
@@ -38,10 +39,12 @@
         <relationship name="recipe" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="RecipeEntity" inverseName="photos" inverseEntity="RecipeEntity"/>
     </entity>
     <entity name="RecipeEntity" representedClassName="RecipeEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="bgColorHex" optional="YES" attributeType="String"/>
         <attribute name="city" optional="YES" attributeType="String"/>
         <attribute name="colorHex" optional="YES" attributeType="String"/>
         <attribute name="country" optional="YES" attributeType="String"/>
         <attribute name="createdDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="decorativeCapFont" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isInInbox" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="latitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>

@@ -14,7 +14,8 @@ struct MosaicView: View {
     @State private var showingCreateRecipe = false
     @State private var draggedRecipe: RecipeEntity?
     @State private var draggedInboxRecipe: RecipeEntity?
-    @State private var isInboxExpanded = true
+    @State private var showingShareSheet = false
+    @State private var recipeToShare: RecipeEntity?
     
     // Track newly added recipes for animation
     @State private var newlyAddedRecipeIDs: Set<UUID> = []
@@ -40,7 +41,7 @@ struct MosaicView: View {
                     HStack(spacing: 0) {
                         // Inbox sidebar
                         inboxSidebar(geometry: geometry)
-                            .frame(width: isInboxExpanded ? min(280, geometry.size.width * 0.25) : 60)
+                            .frame(width: min(280, geometry.size.width * 0.25))
                         
                         Divider()
                             .background(Color.white.opacity(0.3))
@@ -53,7 +54,7 @@ struct MosaicView: View {
                     VStack(spacing: 0) {
                         // Inbox strip at top
                         inboxStrip(geometry: geometry)
-                            .frame(height: isInboxExpanded ? 140 : 50)
+                            .frame(height: 140)
                         
                         Divider()
                             .background(Color.white.opacity(0.3))
@@ -79,44 +80,35 @@ struct MosaicView: View {
     
     private func inboxSidebar(geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                if isInboxExpanded {
+            // Inbox area with rounded corners and padding from borders
+            VStack(spacing: 0) {
+                // Mail icon and new mail indicator
+                HStack {
+                    Spacer()
                     Image(systemName: "envelope.fill")
-                        .foregroundColor(.white)
-                    Text("Inbox")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    
-                    if !dataManager.inboxRecipes.isEmpty {
-                        Text("(\(dataManager.inboxRecipes.count))")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    
+                        .font(.system(size: 24))
+                        .foregroundColor(.white.opacity(0.7))
                     Spacer()
                 }
+                .padding(.top, 16)
+                .padding(.bottom, 8)
                 
-                Button(action: { withAnimation { isInboxExpanded.toggle() } }) {
-                    Image(systemName: isInboxExpanded ? "chevron.left" : "chevron.right")
-                        .foregroundColor(.white)
-                        .padding(8)
+                // New mail indicator line
+                if !dataManager.inboxRecipes.isEmpty {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.5))
+                        .frame(height: 2)
+                        .frame(width: 60)
+                        .padding(.bottom, 12)
                 }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.black.opacity(0.2))
-            
-            if isInboxExpanded {
+                
+                // Inbox recipes
                 if dataManager.inboxRecipes.isEmpty {
                     VStack {
                         Spacer()
                         Image(systemName: "tray")
                             .font(.system(size: 40))
                             .foregroundColor(.white.opacity(0.3))
-                        Text("No recipes")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.5))
                         Spacer()
                     }
                 } else {
@@ -136,15 +128,29 @@ struct MosaicView: View {
                         .padding(12)
                     }
                 }
-                
-                // Test button to add inbox recipe
-                Button(action: createTestInboxRecipe) {
-                    Label("Add Test Inbox", systemImage: "plus.circle")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .padding(.bottom, 10)
             }
+            .background(Color.black.opacity(0.2))
+            .cornerRadius(16)
+            .padding(12)
+            
+            Spacer()
+            
+            // Share/Export area at bottom
+            ShareDropZone(
+                draggedRecipe: $draggedRecipe,
+                showingShareSheet: $showingShareSheet,
+                recipeToShare: $recipeToShare
+            )
+            .padding(.horizontal, 12)
+            .padding(.bottom, 16)
+            
+            // Test button to add inbox recipe
+            Button(action: createTestInboxRecipe) {
+                Label("Add Test Inbox", systemImage: "plus.circle")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .padding(.bottom, 10)
         }
         .background(Color.black.opacity(0.15))
     }
@@ -153,78 +159,79 @@ struct MosaicView: View {
     
     private func inboxStrip(geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            // Header
+            // Mail icon and indicator
             HStack {
-                Image(systemName: "envelope.fill")
-                    .foregroundColor(.white)
-                Text("Inbox")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                if !dataManager.inboxRecipes.isEmpty {
-                    Text("(\(dataManager.inboxRecipes.count))")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                
                 Spacer()
                 
-                Button(action: { withAnimation { isInboxExpanded.toggle() } }) {
-                    Image(systemName: isInboxExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.white)
+                VStack(spacing: 6) {
+                    Image(systemName: "envelope.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white.opacity(0.7))
+                    
+                    // New mail indicator line
+                    if !dataManager.inboxRecipes.isEmpty {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.5))
+                            .frame(width: 40, height: 2)
+                    }
                 }
+                .padding(.leading, 16)
                 
                 // Test button
                 Button(action: createTestInboxRecipe) {
                     Image(systemName: "plus.circle")
                         .foregroundColor(.white.opacity(0.7))
                 }
+                .padding(.trailing, 16)
             }
-            .padding(.horizontal, 16)
             .padding(.vertical, 8)
             
-            if isInboxExpanded {
-                if dataManager.inboxRecipes.isEmpty {
-                    HStack {
-                        Spacer()
-                        Text("No recipes in inbox")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.5))
-                        Spacer()
-                    }
-                    .padding()
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(dataManager.inboxRecipes) { recipe in
-                                InboxRecipeCard(recipe: recipe, compact: true)
-                                    .onDrag {
-                                        self.draggedInboxRecipe = recipe
-                                        return NSItemProvider(object: (recipe.id?.uuidString ?? "") as NSString)
-                                    }
-                                    .onTapGesture {
-                                        selectedRecipe = recipe
-                                    }
-                            }
+            // Inbox recipes in horizontal scroll
+            if dataManager.inboxRecipes.isEmpty {
+                HStack {
+                    Spacer()
+                    Text("No recipes in inbox")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.5))
+                    Spacer()
+                }
+                .padding()
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(dataManager.inboxRecipes) { recipe in
+                            InboxRecipeCard(recipe: recipe, compact: true)
+                                .onDrag {
+                                    self.draggedInboxRecipe = recipe
+                                    return NSItemProvider(object: (recipe.id?.uuidString ?? "") as NSString)
+                                }
+                                .onTapGesture {
+                                    selectedRecipe = recipe
+                                }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
                 }
             }
         }
-        .background(Color.black.opacity(0.15))
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black.opacity(0.2))
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+        )
     }
     
     // MARK: - Main Mosaic Area
     
     private func mosaicArea(geometry: GeometryProxy) -> some View {
         let availableWidth = isLandscape ? 
-            geometry.size.width - (isInboxExpanded ? min(280, geometry.size.width * 0.25) : 60) :
+            geometry.size.width - min(280, geometry.size.width * 0.25) :
             geometry.size.width
         let availableHeight = isLandscape ?
             geometry.size.height :
-            geometry.size.height - (isInboxExpanded ? 140 : 50)
+            geometry.size.height - 140
         
         return ZStack {
             if dataManager.recipes.isEmpty {
@@ -724,7 +731,7 @@ struct MosaicRecipeCard: View {
             // Background with color tint
             // TODO: Replace with background texture image + color tint
             // Background should be a subtle paper/parchment texture
-            // that gets tinted with the owner's color
+            // that gets tinted with the recipe's color (NOT owner color)
             RoundedCornerShape(corners: roundedCorners, radius: 12)
                 .fill(backgroundColor)
             
@@ -788,7 +795,7 @@ struct MosaicRecipeCard: View {
                 .fontWeight(.medium)
                 .multilineTextAlignment(.leading)
                 .lineLimit(3)
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                .foregroundColor(textColor)
                 .padding(.trailing, 8)
             
             Spacer()
@@ -799,11 +806,10 @@ struct MosaicRecipeCard: View {
     
     private var ownerInfoLine: some View {
         HStack(spacing: 6) {
-            // Owner profile photo (circular)
+            // Owner profile photo (circular) - loaded from Assets
             if let owner = recipe.owner,
-               let photoData = owner.profilePhotoData,
-               let uiImage = UIImage(data: photoData) {
-                Image(uiImage: uiImage)
+               let photoName = owner.profilePhotoName {
+                Image(photoName)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 24, height: 24)
@@ -824,8 +830,8 @@ struct MosaicRecipeCard: View {
                     )
             }
             
-            // Owner name
-            Text(recipe.owner?.name ?? "Unknown")
+            // Owner name - display "Personal Recipe" if owner name is exactly "self"
+            Text(displayOwnerName)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
             
@@ -846,17 +852,31 @@ struct MosaicRecipeCard: View {
     
     // MARK: - Computed Properties
     
+    private var displayOwnerName: String {
+        let ownerName = recipe.owner?.name ?? "Unknown"
+        return ownerName == "self" ? "Personal Recipe" : ownerName
+    }
+    
     private var backgroundColor: Color {
-        // Use recipe's color for background tinting
-        if let colorHex = recipe.colorHex {
-            return (Color(hex: colorHex) ?? Color(red: 0.96, green: 0.95, blue: 0.92)).opacity(0.15)
+        // Use bgColorHex for background tinting
+        if let bgColorHex = recipe.bgColorHex {
+            return (Color(hex: bgColorHex) ?? Color(red: 0.96, green: 0.95, blue: 0.92)).opacity(0.15)
         } else {
             return Color(red: 0.96, green: 0.95, blue: 0.92)
         }
     }
     
+    private var textColor: Color {
+        // Use colorHex for text color
+        if let colorHex = recipe.colorHex {
+            return Color(hex: colorHex) ?? Color(red: 0.3, green: 0.2, blue: 0.1)
+        } else {
+            return Color(red: 0.3, green: 0.2, blue: 0.1)
+        }
+    }
+    
     private var decorativeCapitalColor: Color {
-        // Use recipe's color for decorative capital
+        // Use colorHex for decorative capital
         if let colorHex = recipe.colorHex {
             return Color(hex: colorHex) ?? .brown
         } else {
@@ -875,43 +895,251 @@ struct InboxRecipeCard: View {
     let recipe: RecipeEntity
     var compact: Bool = false
     
+    // Calculate card dimensions
+    private var cardWidth: CGFloat { compact ? 140 : 220 }
+    private var cardHeight: CGFloat { compact ? 100 : 140 }
+    
+    // Calculate column widths (1:4 ratio, same as mosaic card)
+    private var leftColumnWidth: CGFloat { cardWidth * 0.2 }
+    private var rightColumnWidth: CGFloat { cardWidth * 0.8 }
+    
+    // Extract first letter for decorative capital
+    private var firstLetter: String {
+        String((recipe.title ?? "R").prefix(1)).uppercased()
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Image(systemName: "envelope.open")
-                    .font(.system(size: compact ? 12 : 14))
-                    .foregroundColor(.brown)
-                
-                if !compact {
-                    Text(recipe.senderName ?? "Unknown")
-                        .font(.caption)
-                        .foregroundColor(.brown.opacity(0.8))
+        ZStack {
+            // Background with color tint (using bgColorHex)
+            RoundedRectangle(cornerRadius: 12)
+                .fill(backgroundColor)
+            
+            // Border
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.brown.opacity(0.3), lineWidth: 1.5)
+            
+            // Card content
+            VStack(spacing: 0) {
+                // Main content area (two columns)
+                HStack(alignment: .top, spacing: 0) {
+                    // LEFT COLUMN: Decorative capital letter (1/5 width)
+                    VStack {
+                        Spacer()
+                        Text(firstLetter)
+                            .font(.custom("Georgia-Bold", size: compact ? 28 : 35))
+                            .foregroundColor(textColor)
+                        Spacer()
+                    }
+                    .frame(width: leftColumnWidth)
+                    
+                    // RIGHT COLUMN: Recipe title (4/5 width)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Spacer()
+                        
+                        Text(recipe.title ?? "Untitled")
+                            .font(.custom("Georgia", size: compact ? 11 : 13))
+                            .fontWeight(.medium)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(compact ? 2 : 3)
+                            .foregroundColor(textColor)
+                            .padding(.trailing, 8)
+                        
+                        Spacer()
+                    }
+                    .frame(width: rightColumnWidth)
                 }
+                .frame(maxHeight: .infinity)
+                
+                Spacer()
+                
+                // BOTTOM: Sender info line
+                HStack(spacing: 6) {
+                    Image(systemName: "envelope.open")
+                        .font(.system(size: compact ? 8 : 10))
+                        .foregroundColor(.brown.opacity(0.5))
+                    
+                    Text(recipe.senderName ?? "Unknown")
+                        .font(.system(size: compact ? 8 : 10, weight: .medium))
+                        .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 6)
+            }
+            .padding(.top, 8)
+        }
+        .frame(width: cardWidth, height: cardHeight)
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var backgroundColor: Color {
+        // Use bgColorHex for background tinting
+        if let bgColorHex = recipe.bgColorHex {
+            return (Color(hex: bgColorHex) ?? Color(red: 0.96, green: 0.95, blue: 0.92)).opacity(0.15)
+        } else {
+            return Color(red: 0.96, green: 0.95, blue: 0.92)
+        }
+    }
+    
+    private var textColor: Color {
+        // Use colorHex for text color
+        if let colorHex = recipe.colorHex {
+            return Color(hex: colorHex) ?? Color(red: 0.3, green: 0.2, blue: 0.1)
+        } else {
+            return Color(red: 0.3, green: 0.2, blue: 0.1)
+        }
+    }
+}
+
+// MARK: - Share Drop Zone
+
+struct ShareDropZone: View {
+    @Binding var draggedRecipe: RecipeEntity?
+    @Binding var showingShareSheet: Bool
+    @Binding var recipeToShare: RecipeEntity?
+    
+    @State private var isHovering = false
+    @State private var animateSuccess = false
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    style: StrokeStyle(lineWidth: 2, dash: [8, 4])
+                )
+                .foregroundColor(isHovering ? Color.white.opacity(0.7) : Color.white.opacity(0.4))
+                .frame(height: 80)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isHovering ? Color.white.opacity(0.1) : Color.clear)
+                )
+                .overlay(
+                    VStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 28))
+                            .foregroundColor(isHovering ? .white.opacity(0.8) : .white.opacity(0.3))
+                        
+                        Text("Share")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                )
+            
+            // Success animation overlay
+            if animateSuccess {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.green.opacity(0.3))
+                    .frame(height: 80)
+                    .overlay(
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.green)
+                    )
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .onDrop(of: [.text], isTargeted: $isHovering) { providers in
+            if let recipe = draggedRecipe {
+                // Trigger success animation
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    animateSuccess = true
+                }
+                
+                // Show share sheet after animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    recipeToShare = recipe
+                    showingShareSheet = true
+                    
+                    // Reset animation
+                    withAnimation {
+                        animateSuccess = false
+                    }
+                }
+                
+                draggedRecipe = nil
+                return true
+            }
+            return false
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            if let recipe = recipeToShare {
+                ShareSheet(recipe: recipe)
+            }
+        }
+    }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: View {
+    let recipe: RecipeEntity
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 60))
+                    .foregroundColor(.brown)
+                    .padding()
+                
+                Text("Share Recipe")
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                Text(recipe.title ?? "Untitled Recipe")
+                    .font(.headline)
+                    .foregroundColor(.gray)
+                
+                Spacer()
+                
+                VStack(spacing: 12) {
+                    Button(action: {
+                        // Export as PDF
+                        dismiss()
+                    }) {
+                        Label("Export as PDF", systemImage: "doc.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.brown)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    
+                    Button(action: {
+                        // Send via email
+                        dismiss()
+                    }) {
+                        Label("Send via Email", systemImage: "envelope.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.brown.opacity(0.8))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    
+                    Button(action: {
+                        // Share with others
+                        dismiss()
+                    }) {
+                        Label("Share with Others", systemImage: "person.2.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.brown.opacity(0.6))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                }
+                .padding(.horizontal, 40)
                 
                 Spacer()
             }
-            
-            Text(recipe.title ?? "Untitled")
-                .font(.system(size: compact ? 13 : 15, weight: .medium))
-                .lineLimit(compact ? 1 : 2)
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-            
-            if !compact, let sender = recipe.senderName {
-                Text("From: \(sender)")
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
+            .navigationBarItems(trailing: Button("Cancel") {
+                dismiss()
+            })
         }
-        .padding(compact ? 10 : 12)
-        .frame(width: compact ? 140 : nil)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(red: 0.98, green: 0.97, blue: 0.94))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.brown.opacity(0.3), lineWidth: 1)
-        )
     }
 }
 

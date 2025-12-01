@@ -103,43 +103,130 @@ struct RecipeDetailView: View {
     // MARK: - Compact Ancestry Timeline
     
     private var compactAncestryTimeline: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Array(recipe.ancestryStepsArray.enumerated()), id: \.element.id) { index, step in
-                    HStack(spacing: 6) {
-                        // Compact step
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(step.country ?? "?")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-                            
-                            if let date = step.roughDate, !date.isEmpty {
-                                Text(date)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.gray)
+        HStack(spacing: 0) {
+            // Play/Pause button on the left (if audio exists)
+            if let audioNote = recipe.primaryAudioNote,
+               let fileName = audioNote.audioFileName {
+                Button(action: {
+                    audioManager.togglePlayback(fileName: fileName)
+                }) {
+                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.brown)
+                        .padding(.leading, 16)
+                }
+            }
+            
+            // Ancestry timeline
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(recipe.ancestryStepsArray.enumerated()), id: \.element.id) { index, step in
+                        HStack(spacing: 8) {
+                            // Ancestry step card (larger and more prominent)
+                            VStack(alignment: .leading, spacing: 8) {
+                                // Header label
+                                Text("ORIGIN \(index + 1)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.brown.opacity(0.5))
+                                    .tracking(0.5)
+                                
+                                // Country and Region row
+                                HStack(spacing: 10) {
+                                    // Country (always shown)
+                                    VStack(alignment: .leading, spacing: 2) {
+//                                        Text("Country")
+//                                            .font(.system(size: 10, weight: .medium))
+//                                            .foregroundColor(.gray.opacity(0.7))
+                                        
+                                        Text(step.country ?? "Unknown")
+                                            .font(.system(size: 17, weight: .bold))
+                                            .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                                    }
+                                    
+                                    // Region (if not empty)
+                                    if let region = step.region, !region.isEmpty {
+                                        Divider()
+                                            .frame(height: 30)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+//                                            Text("Region")
+//                                                .font(.system(size: 10, weight: .medium))
+//                                                .foregroundColor(.gray.opacity(0.7))
+//                                            
+                                            Text(region)
+                                                .font(.system(size: 15, weight: .semibold))
+                                                .foregroundColor(.brown.opacity(0.8))
+                                        }
+                                    }
+                                }
+                                
+                                // Date (if not empty)
+                                if let date = step.roughDate, !date.isEmpty {
+                                    Divider()
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+//                                        Text("Date")
+//                                            .font(.system(size: 10, weight: .medium))
+//                                            .foregroundColor(.gray.opacity(0.7))
+                                        
+                                        Text(date)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.gray)
+                                            .italic()
+                                    }
+                                }
+                                
+                                // Note (if not empty)
+                                if let note = step.note, !note.isEmpty {
+                                    Divider()
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+//                                        Text("Note")
+//                                            .font(.system(size: 10, weight: .medium))
+//                                            .foregroundColor(.gray.opacity(0.7))
+                                        
+                                        Text(note)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
+                                            .lineLimit(3)
+                                    }
+                                }
                             }
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.white)
-                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-                        )
-                        
-                        // Arrow connector
-                        if index < recipe.ancestryStepsArray.count - 1 {
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 10))
-                                .foregroundColor(.brown.opacity(0.5))
+                            .padding(16)
+                            .frame(minWidth: 200)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.brown.opacity(0.25), lineWidth: 2)
+                                    )
+                                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                            )
+                            
+                            // Arrow connector
+                            if index < recipe.ancestryStepsArray.count - 1 {
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.brown.opacity(0.6))
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
-        .background(Color.brown.opacity(0.1))
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.brown.opacity(0.15),
+                    Color.brown.opacity(0.08)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
     
     // MARK: - Recipe Content (Scrollable in Landscape)
@@ -248,16 +335,30 @@ struct RecipeDetailView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(recipe.photosArray) { photo in
-                        photoCard(photo: photo, width: sidebarWidth - 32)
+                        if let imageData = photo.imageData,
+                           let uiImage = UIImage(data: imageData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: sidebarWidth - 32, height: 200)
+                                .clipped()
+                                .cornerRadius(8)
+                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        dataManager.deletePhoto(photo)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                        }
                     }
-                    
-                    // Add photo placeholder
-                    addPhotoPlaceholder(width: sidebarWidth - 32)
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 100)
             }
         }
+        .frame(width: sidebarWidth)
+        .background(Color.white.opacity(0.5))
     }
     
     // MARK: - Photos Section (Portrait)
@@ -277,59 +378,34 @@ struct RecipeDetailView: View {
                         .foregroundColor(.brown)
                 }
             }
+            .padding(.horizontal, 20)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(recipe.photosArray) { photo in
-                        photoCard(photo: photo, width: 150)
-                    }
-                    
-                    addPhotoPlaceholder(width: 150)
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-    }
-    
-    private func photoCard(photo: PhotoEntity, width: CGFloat) -> some View {
-        Group {
-            if let imageData = photo.imageData,
-               let uiImage = UIImage(data: imageData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: width, height: width * 0.75)
-                    .clipped()
-                    .cornerRadius(8)
-                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            dataManager.deletePhoto(photo)
-                        } label: {
-                            Label("Delete Photo", systemImage: "trash")
+            if !recipe.photosArray.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(recipe.photosArray) { photo in
+                            if let imageData = photo.imageData,
+                               let uiImage = UIImage(data: imageData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 200, height: 150)
+                                    .clipped()
+                                    .cornerRadius(8)
+                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            dataManager.deletePhoto(photo)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                            }
                         }
                     }
+                    .padding(.horizontal, 20)
+                }
             }
-        }
-    }
-    
-    private func addPhotoPlaceholder(width: CGFloat) -> some View {
-        Button(action: { showingPhotoPicker = true }) {
-            VStack(spacing: 8) {
-                Image(systemName: "camera")
-                    .font(.system(size: 30))
-                    .foregroundColor(.brown.opacity(0.4))
-                
-                Text("Add Photo")
-                    .font(.caption)
-                    .foregroundColor(.brown.opacity(0.6))
-            }
-            .frame(width: width, height: width * 0.75)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
-                    .foregroundColor(.brown.opacity(0.3))
-            )
         }
     }
     
@@ -339,44 +415,34 @@ struct RecipeDetailView: View {
         VStack {
             Spacer()
             
-            HStack(spacing: 16) {
-                // Play/Pause button
-                Button(action: {
-                    if let audioNote = recipe.primaryAudioNote,
-                       let fileName = audioNote.audioFileName {
-                        if audioManager.isPlaying {
-                            audioManager.pausePlayback()
-                        } else {
-                            if audioManager.currentPlayingFileName == fileName {
-                                audioManager.resumePlayback()
-                            } else {
-                                audioManager.playAudio(fileName: fileName)
-                            }
+            if let audioNote = recipe.primaryAudioNote {
+                HStack(spacing: 16) {
+                    // Play/Pause button
+                    Button(action: {
+                        if let fileName = audioNote.audioFileName {
+                            audioManager.togglePlayback(fileName: fileName)
                         }
+                    }) {
+                        Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.brown)
                     }
-                }) {
-                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.brown)
-                }
-                
-                // Progress bar
-                VStack(alignment: .leading, spacing: 4) {
-                    if let audioNote = recipe.primaryAudioNote {
+                    
+                    // Progress and time
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Progress bar
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 // Background track
                                 RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.brown.opacity(0.2))
+                                    .fill(Color.gray.opacity(0.3))
                                     .frame(height: 8)
                                 
-                                // Progress
+                                // Progress fill
                                 RoundedRectangle(cornerRadius: 4)
                                     .fill(Color.brown)
                                     .frame(
-                                        width: audioNote.duration > 0 ?
-                                            geo.size.width * CGFloat(audioManager.currentTime / audioNote.duration) :
-                                            0,
+                                        width: geo.size.width * CGFloat(audioManager.currentTime / max(audioNote.duration, 0.1)),
                                         height: 8
                                     )
                             }
@@ -404,26 +470,26 @@ struct RecipeDetailView: View {
                                 .foregroundColor(.gray)
                         }
                     }
+                    
+                    // Stop button
+                    Button(action: {
+                        audioManager.stopPlayback()
+                    }) {
+                        Image(systemName: "stop.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.brown.opacity(0.7))
+                    }
                 }
-                
-                // Stop button
-                Button(action: {
-                    audioManager.stopPlayback()
-                }) {
-                    Image(systemName: "stop.circle")
-                        .font(.system(size: 32))
-                        .foregroundColor(.brown.opacity(0.7))
-                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: -2)
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, geometry.safeAreaInsets.bottom + 8)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
-                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: -2)
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, geometry.safeAreaInsets.bottom + 8)
         }
     }
     

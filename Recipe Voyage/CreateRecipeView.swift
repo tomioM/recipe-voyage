@@ -19,6 +19,7 @@ struct CreateRecipeView: View {
     @State private var ingredients: [EditableIngredient] = []
     @State private var steps: [EditableStep] = []
     @State private var ancestrySteps: [EditableAncestry] = []
+    @State private var draggedAncestry: EditableAncestry?
     
     // Audio recording
     @State private var recordedFileName: String?
@@ -140,51 +141,102 @@ struct CreateRecipeView: View {
     // MARK: - Editable Ancestry Timeline
     
     private var editableAncestryTimeline: some View {
-        VStack(spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(Array(ancestrySteps.enumerated()), id: \.element.id) { index, step in
-                        HStack(spacing: 6) {
-                            EditableAncestryCard(
-                                ancestry: $ancestrySteps[index],
-                                onDelete: {
-                                    ancestrySteps.remove(at: index)
-                                }
-                            )
-                            
-                            if index < ancestrySteps.count - 1 {
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.brown.opacity(0.5))
-                            }
-                        }
-                    }
-                    
-                    // Add ancestry button
-                    Button(action: {
-                        ancestrySteps.append(EditableAncestry())
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 12))
-                            Text("Add Origin")
-                                .font(.system(size: 12))
-                        }
-                        .foregroundColor(.brown)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 2]))
-                                .foregroundColor(.brown.opacity(0.5))
-                        )
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+        VStack(spacing: 0) {
+            ancestryTimelineContent
+        }
+//        .background {
+//            LinearGradient(
+//                gradient: Gradient(colors: [
+//                    Color.brown.opacity(0.15),
+//                    Color.brown.opacity(0.08)
+//                ]),
+//                startPoint: .top,
+//                endPoint: .bottom
+//            )
+//        }
+    }
+    
+    private var ancestryTimelineContent: some View {
+        HStack(spacing: 0) {
+            playPauseButton
+            ancestryCardsScrollView
+        }
+    }
+
+    // MARK: - Subviews
+
+    @ViewBuilder
+    private var playPauseButton: some View {
+        if let fileName = recordedFileName {
+            Button(action: { audioManager.togglePlayback(fileName: fileName) }) {
+                Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(.brown)
+                    .padding(.leading, 16)
             }
         }
-        .background(Color.brown.opacity(0.1))
+    }
+
+    private var ancestryCardsScrollView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(Array(ancestrySteps.enumerated()), id: \.element.id) { index, step in
+                    ancestryCardRow(for: step, at: index)
+                }
+                addOriginButton
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func ancestryCardRow(for step: EditableAncestry, at index: Int) -> some View {
+        HStack(spacing: 8) {
+            EditableAncestryCard(
+                ancestry: $ancestrySteps[index],
+                onDelete: {
+                    withAnimation {
+                        ancestrySteps.removeAll { $0.id == step.id }
+                    }
+                }
+            )
+            .opacity(draggedAncestry?.id == step.id ? 0.5 : 1.0)
+            .onDrag {
+                self.draggedAncestry = step
+                return NSItemProvider(object: step.id.uuidString as NSString)
+            }
+            .onDrop(of: [.text], delegate: AncestryDropDelegate(
+                item: step,
+                items: $ancestrySteps,
+                draggedItem: $draggedAncestry
+            ))
+            
+            if index < ancestrySteps.count - 1 {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.brown.opacity(0.6))
+            }
+        }
+    }
+
+    private var addOriginButton: some View {
+        Button(action: { withAnimation { ancestrySteps.append(EditableAncestry()) } }) {
+            VStack(spacing: 6) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                Text("Add Origin")
+                    .font(.system(size: 13, weight: .medium))
+            }
+            .foregroundColor(.brown)
+            .frame(minWidth: 100)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6, 3]))
+                    .foregroundColor(.brown.opacity(0.5))
+            )
+        }
     }
     
     // MARK: - Recipe Editor Content
@@ -590,46 +642,159 @@ struct EditableAncestryCard: View {
     @Binding var ancestry: EditableAncestry
     let onDelete: () -> Void
     
-    @State private var isExpanded = true
-    
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Delete button in top right corner
             HStack {
-                TextField("Country", text: $ancestry.country)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-                    .frame(minWidth: 60)
-                
-                Button(action: { isExpanded.toggle() }) {
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray)
-                }
-                
+                Spacer()
                 Button(action: onDelete) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.red.opacity(0.6))
                 }
             }
             
-            if isExpanded {
-                TextField("Region", text: $ancestry.region)
-                    .font(.system(size: 11))
-                    .foregroundColor(.gray)
+            // Country and Region on same line (Country LEFT, Region RIGHT)
+            HStack(spacing: 10) {
+                // Country field (required) - LEFT
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 3) {
+                        Text("Country")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.gray.opacity(0.8))
+                        Text("*")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.red.opacity(0.7))
+                    }
+                    
+                    TextField("Italy", text: $ancestry.country)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(ancestry.country.isEmpty ? Color.red.opacity(0.3) : Color.brown.opacity(0.2), lineWidth: 1.5)
+                                )
+                        )
+                }
+                .frame(maxWidth: .infinity)
                 
-                TextField("Date (e.g., 1920s)", text: $ancestry.date)
-                    .font(.system(size: 10))
-                    .foregroundColor(.gray)
+                // Region field (optional) - RIGHT
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Region (opt)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.gray.opacity(0.8))
+                    
+                    TextField("Tuscany", text: $ancestry.region)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.brown.opacity(0.8))
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.brown.opacity(0.15), lineWidth: 1)
+                                )
+                        )
+                }
+                .frame(maxWidth: .infinity)
             }
+            
+            // Date field (optional)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Date (opt)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.gray.opacity(0.8))
+                
+                TextField("1920s", text: $ancestry.date)
+                    .font(.system(size: 13))
+                    .foregroundColor(.gray)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.brown.opacity(0.15), lineWidth: 1)
+                            )
+                    )
+            }
+            
+            // Note field (optional) - SINGLE LINE
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Note (opt)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.gray.opacity(0.8))
+                
+                TextField("Add context...", text: $ancestry.note)
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.brown.opacity(0.15), lineWidth: 1)
+                            )
+                    )
+                    .submitLabel(.done)
+            }
+            
+            // Drag handle at bottom
+            HStack {
+                Spacer()
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray.opacity(0.4))
+                Spacer()
+            }
+            .padding(.top, 4)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(14)
+        .frame(minWidth: 280, maxWidth: 320)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(red: 0.98, green: 0.97, blue: 0.94))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.brown.opacity(0.25), lineWidth: 1.5)
+                )
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         )
+    }
+}
+
+// MARK: - Ancestry Drop Delegate
+
+struct AncestryDropDelegate: DropDelegate {
+    let item: EditableAncestry
+    @Binding var items: [EditableAncestry]
+    @Binding var draggedItem: EditableAncestry?
+    
+    func performDrop(info: DropInfo) -> Bool {
+        draggedItem = nil
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        guard let fromIndex = items.firstIndex(where: { $0.id == draggedItem?.id }),
+              let toIndex = items.firstIndex(where: { $0.id == item.id }),
+              fromIndex != toIndex else {
+            return
+        }
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            items.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+        }
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: .move)
     }
 }
 

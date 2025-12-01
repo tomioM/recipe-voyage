@@ -8,31 +8,22 @@ struct RecipeAncestryTimeline: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Section header
-//            Text("Recipe Journey")
-//                .font(.custom("Georgia-Bold", size: 24))
-//                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-            
             if ancestrySteps.isEmpty {
-                // Empty state
                 Text("No ancestry recorded")
                     .font(.custom("Georgia-Italic", size: 14))
                     .foregroundColor(Color(red: 0.5, green: 0.4, blue: 0.3))
                     .padding(.vertical, 20)
             } else {
-                // Full-width horizontal scrolling timeline
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 0) {
                         ForEach(Array(ancestrySteps.enumerated()), id: \.element.id) { index, step in
                             HStack(spacing: 0) {
-                                // Ancestry step card
                                 AncestryStepCard(
                                     step: step,
                                     isFirst: index == 0,
                                     isLast: index == ancestrySteps.count - 1
                                 )
                                 
-                                // Connector arrow (if not last)
                                 if index < ancestrySteps.count - 1 {
                                     TimelineConnector()
                                 }
@@ -56,16 +47,13 @@ struct AncestryStepCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Header with flag/star
             HStack {
-                // Country (required)
                 Text(step.country ?? "Unknown")
                     .font(.custom("Georgia-Bold", size: 18))
                     .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
                 
                 Spacer()
                 
-                // Icon
                 if isFirst {
                     Image(systemName: "flag.fill")
                         .font(.system(size: 12))
@@ -77,21 +65,18 @@ struct AncestryStepCard: View {
                 }
             }
             
-            // Region (optional)
             if let region = step.region, !region.isEmpty {
                 Text(region)
                     .font(.custom("Georgia", size: 15))
                     .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
             }
             
-            // Rough date (optional)
             if let date = step.roughDate, !date.isEmpty {
                 Text(date)
                     .font(.custom("Georgia-Italic", size: 14))
                     .foregroundColor(Color(red: 0.5, green: 0.4, blue: 0.3))
             }
             
-            // Note (optional)
             if let note = step.note, !note.isEmpty {
                 Text(note)
                     .font(.custom("Georgia", size: 13))
@@ -101,12 +86,11 @@ struct AncestryStepCard: View {
                     .padding(.top, 6)
             }
             
-            // Generation indicator (optional)
             if step.generation > 0 {
                 HStack(spacing: 4) {
                     Image(systemName: "person.fill")
                         .font(.system(size: 9))
-                    Text("Gen \(step.generation)")
+                    Text("\(step.generation)")
                         .font(.system(size: 11, weight: .medium))
                 }
                 .foregroundColor(.brown.opacity(0.5))
@@ -133,12 +117,10 @@ struct AncestryStepCard: View {
 struct TimelineConnector: View {
     var body: some View {
         HStack(spacing: 4) {
-            // Dashed line
             Rectangle()
                 .fill(Color.brown.opacity(0.3))
                 .frame(width: 50, height: 2)
             
-            // Arrow
             Image(systemName: "arrowtriangle.right.fill")
                 .font(.system(size: 10))
                 .foregroundColor(.brown.opacity(0.4))
