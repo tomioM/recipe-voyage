@@ -1,17 +1,17 @@
 import SwiftUI
 
 // MARK: - Recipe Ancestry Timeline
-// Horizontal timeline showing the journey of a recipe through generations
+// Full-width horizontal timeline showing the journey of a recipe through generations
 
 struct RecipeAncestryTimeline: View {
     let ancestrySteps: [AncestryStepEntity]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             // Section header
-            Text("Recipe Journey")
-                .font(.custom("Georgia-Bold", size: 20))
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+//            Text("Recipe Journey")
+//                .font(.custom("Georgia-Bold", size: 24))
+//                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
             
             if ancestrySteps.isEmpty {
                 // Empty state
@@ -20,7 +20,7 @@ struct RecipeAncestryTimeline: View {
                     .foregroundColor(Color(red: 0.5, green: 0.4, blue: 0.3))
                     .padding(.vertical, 20)
             } else {
-                // Horizontal scrolling timeline
+                // Full-width horizontal scrolling timeline
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 0) {
                         ForEach(Array(ancestrySteps.enumerated()), id: \.element.id) { index, step in
@@ -32,7 +32,7 @@ struct RecipeAncestryTimeline: View {
                                     isLast: index == ancestrySteps.count - 1
                                 )
                                 
-                                // Connector line (if not last)
+                                // Connector arrow (if not last)
                                 if index < ancestrySteps.count - 1 {
                                     TimelineConnector()
                                 }
@@ -43,12 +43,11 @@ struct RecipeAncestryTimeline: View {
                 }
             }
         }
-        .padding(.vertical, 8)
     }
 }
 
 // MARK: - Ancestry Step Card
-// Individual card in the timeline
+// Individual card in the timeline - updated styling
 
 struct AncestryStepCard: View {
     let step: AncestryStepEntity
@@ -56,83 +55,75 @@ struct AncestryStepCard: View {
     let isLast: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Country (required)
-            Text(step.country ?? "Unknown")
-                .font(.custom("Georgia-Bold", size: 16))
-                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+        VStack(alignment: .leading, spacing: 8) {
+            // Header with flag/star
+            HStack {
+                // Country (required)
+                Text(step.country ?? "Unknown")
+                    .font(.custom("Georgia-Bold", size: 18))
+                    .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+                
+                Spacer()
+                
+                // Icon
+                if isFirst {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.brown.opacity(0.6))
+                } else if isLast {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.brown.opacity(0.6))
+                }
+            }
             
             // Region (optional)
             if let region = step.region, !region.isEmpty {
                 Text(region)
-                    .font(.custom("Georgia", size: 14))
+                    .font(.custom("Georgia", size: 15))
                     .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
             }
             
             // Rough date (optional)
             if let date = step.roughDate, !date.isEmpty {
                 Text(date)
-                    .font(.custom("Georgia-Italic", size: 13))
+                    .font(.custom("Georgia-Italic", size: 14))
                     .foregroundColor(Color(red: 0.5, green: 0.4, blue: 0.3))
             }
             
             // Note (optional)
             if let note = step.note, !note.isEmpty {
                 Text(note)
-                    .font(.custom("Georgia", size: 12))
+                    .font(.custom("Georgia", size: 13))
                     .foregroundColor(Color(red: 0.45, green: 0.35, blue: 0.25))
                     .lineLimit(3)
-                    .frame(maxWidth: 180)
-                    .padding(.top, 4)
+                    .frame(maxWidth: 220)
+                    .padding(.top, 6)
             }
             
             // Generation indicator (optional)
             if step.generation > 0 {
-                Text("Generation \(step.generation)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.brown.opacity(0.6))
-                    .padding(.top, 4)
+                HStack(spacing: 4) {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 9))
+                    Text("Gen \(step.generation)")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(.brown.opacity(0.5))
+                .padding(.top, 4)
             }
         }
-        .padding(12)
-        .frame(width: 200, alignment: .leading)
+        .padding(16)
+        .frame(width: 240, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color(red: 0.96, green: 0.95, blue: 0.92))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.brown.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.brown.opacity(isFirst || isLast ? 0.5 : 0.3), lineWidth: isFirst || isLast ? 2 : 1)
         )
-        // Highlight first and last differently
-        .overlay(
-            Group {
-                if isFirst {
-                    VStack {
-                        HStack {
-                            Image(systemName: "flag.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.brown.opacity(0.6))
-                                .padding(4)
-                            Spacer()
-                        }
-                        Spacer()
-                    }
-                }
-                if isLast {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.brown.opacity(0.6))
-                                .padding(4)
-                        }
-                        Spacer()
-                    }
-                }
-            }
-        )
+        .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -141,18 +132,18 @@ struct AncestryStepCard: View {
 
 struct TimelineConnector: View {
     var body: some View {
-        HStack(spacing: 0) {
-            // Line
+        HStack(spacing: 4) {
+            // Dashed line
             Rectangle()
-                .fill(Color.brown.opacity(0.4))
-                .frame(width: 40, height: 2)
+                .fill(Color.brown.opacity(0.3))
+                .frame(width: 50, height: 2)
             
             // Arrow
             Image(systemName: "arrowtriangle.right.fill")
-                .font(.system(size: 8))
+                .font(.system(size: 10))
                 .foregroundColor(.brown.opacity(0.4))
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 12)
     }
 }
 
@@ -160,19 +151,14 @@ struct TimelineConnector: View {
 
 struct RecipeAncestryTimeline_Previews: PreviewProvider {
     static var previews: some View {
-        // Mock data for preview
         VStack {
             Text("With Ancestry")
                 .font(.headline)
             
             RecipeAncestryTimeline(ancestrySteps: [])
-            
-            Text("Empty State")
-                .font(.headline)
-                .padding(.top)
-            
-            RecipeAncestryTimeline(ancestrySteps: [])
                 .padding()
+            
+            Spacer()
         }
     }
 }

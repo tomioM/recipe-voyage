@@ -2,61 +2,80 @@ import CoreData
 import SwiftUI
 
 // This class manages all database operations
-// Think of it as the librarian who organizes all your recipes
 class CoreDataManager: ObservableObject {
     
-    // "shared" means there's only one CoreDataManager for the whole app
     static let shared = CoreDataManager()
     
-    // The container holds our database
     let container: NSPersistentContainer
     
-    // @Published means: when this changes, update any views watching it
-    // This is an array (list) of all recipes
+    // Main mosaic recipes (not in inbox)
     @Published var recipes: [RecipeEntity] = []
     
-    // init() runs when we create the CoreDataManager
+    // Inbox recipes (received from others)
+    @Published var inboxRecipes: [RecipeEntity] = []
+    
     init() {
-        // Create/open the database file
-        // "RecipeBook" must match your .xcdatamodeld file name
         container = NSPersistentContainer(name: "RecipeBook")
         
-        // Load the database from disk
         container.loadPersistentStores { description, error in
             if let error = error {
-                // If something went wrong, print it
                 print("❌ Core Data failed to load: \(error.localizedDescription)")
             } else {
                 print("✅ Core Data loaded successfully")
             }
         }
         
-        // Load all recipes into memory
         fetchRecipes()
     }
     
     // MARK: - Fetch Recipes
-    // Get all recipes from the database
+    
     func fetchRecipes() {
-        // NSFetchRequest is like a search query
-        let request = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
-        
-        // Sort by sortOrder for manual arrangement
-        request.sortDescriptors = [
+        // Fetch main mosaic recipes
+        let mainRequest = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
+        mainRequest.predicate = NSPredicate(format: "isInInbox == NO OR isInInbox == nil")
+        mainRequest.sortDescriptors = [
             NSSortDescriptor(keyPath: \RecipeEntity.sortOrder, ascending: true)
         ]
         
+        // Fetch inbox recipes
+        let inboxRequest = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
+        inboxRequest.predicate = NSPredicate(format: "isInInbox == YES")
+        inboxRequest.sortDescriptors = [
+            NSSortDescriptor(keyPath: \RecipeEntity.createdDate, ascending: false)
+        ]
+        
         do {
-            // Try to get the recipes
-            recipes = try container.viewContext.fetch(request)
-            print("📚 Loaded \(recipes.count) recipes")
+            recipes = try container.viewContext.fetch(mainRequest)
+            inboxRecipes = try container.viewContext.fetch(inboxRequest)
+            print("📚 Loaded \(recipes.count) recipes, \(inboxRecipes.count) in inbox")
         } catch {
             print("❌ Failed to fetch recipes: \(error)")
         }
     }
     
+    // MARK: - Move Recipe from Inbox to Mosaic
+    
+    func moveFromInboxToMosaic(_ recipe: RecipeEntity, atIndex: Int? = nil) {
+        recipe.isInInbox = false
+        
+        if let index = atIndex, index < recipes.count {
+            recipe.sortOrder = Int16(index)
+            // Shift other recipes
+            for i in index..<recipes.count {
+                recipes[i].sortOrder = Int16(i + 1)
+            }
+        } else {
+            recipe.sortOrder = Int16(recipes.count)
+        }
+        
+        saveContext()
+        fetchRecipes()
+        print("📬 Moved recipe from inbox to mosaic: \(recipe.title ?? "Unknown")")
+    }
+    
     // MARK: - Reorder Recipes
-    // Move a recipe from one position to another
+    
     func moveRecipe(from sourceIndex: Int, to destinationIndex: Int) {
         guard sourceIndex != destinationIndex,
               sourceIndex >= 0, sourceIndex < recipes.count,
@@ -64,49 +83,62 @@ class CoreDataManager: ObservableObject {
             return
         }
         
-        // Reorder the array
         var reordered = recipes
         let movedRecipe = reordered.remove(at: sourceIndex)
         reordered.insert(movedRecipe, at: destinationIndex)
         
-        // Update sortOrder for all recipes
         for (index, recipe) in reordered.enumerated() {
             recipe.sortOrder = Int16(index)
         }
         
         saveContext()
         fetchRecipes()
-        
         print("🔀 Reordered recipes")
     }
     
     // MARK: - Create Recipe
-    // Make a new recipe and save it
+    
     func createRecipe(title: String, symbol: String, color: String, description: String) -> RecipeEntity {
-        // Create a new recipe object
         let recipe = RecipeEntity(context: container.viewContext)
         
-        // Fill in the details
-        recipe.id = UUID() // Unique identifier
+        recipe.id = UUID()
         recipe.title = title
         recipe.symbol = symbol
         recipe.colorHex = color
         recipe.recipeDescription = description
-        recipe.createdDate = Date() // Right now
-        recipe.sortOrder = Int16(recipes.count) // Add to end
+        recipe.createdDate = Date()
+        recipe.sortOrder = Int16(recipes.count)
+        recipe.isInInbox = false
         
-        // Save to database
         saveContext()
-        
-        // Reload the recipes list
         fetchRecipes()
         
         print("✅ Created recipe: \(title)")
         return recipe
     }
     
+    // Create a recipe that goes to inbox (simulating received recipe)
+    func createInboxRecipe(title: String, symbol: String, color: String, description: String, senderName: String) -> RecipeEntity {
+        let recipe = RecipeEntity(context: container.viewContext)
+        
+        recipe.id = UUID()
+        recipe.title = title
+        recipe.symbol = symbol
+        recipe.colorHex = color
+        recipe.recipeDescription = description
+        recipe.createdDate = Date()
+        recipe.isInInbox = true
+        recipe.senderName = senderName
+        
+        saveContext()
+        fetchRecipes()
+        
+        print("📬 Created inbox recipe: \(title) from \(senderName)")
+        return recipe
+    }
+    
     // MARK: - Update Recipe
-    // Change an existing recipe
+    
     func updateRecipe(_ recipe: RecipeEntity, title: String, symbol: String, color: String, description: String) {
         recipe.title = title
         recipe.symbol = symbol
@@ -120,16 +152,14 @@ class CoreDataManager: ObservableObject {
     }
     
     // MARK: - Delete Recipe
-    // Remove a recipe (and its audio files)
+    
     func deleteRecipe(_ recipe: RecipeEntity) {
-        // First, delete any audio files on disk
         if let audioNotes = recipe.audioNotes as? Set<AudioNoteEntity> {
             for note in audioNotes {
                 deleteAudioFile(note.audioFileName ?? "")
             }
         }
         
-        // Delete from database
         container.viewContext.delete(recipe)
         saveContext()
         fetchRecipes()
@@ -138,17 +168,23 @@ class CoreDataManager: ObservableObject {
     }
     
     // MARK: - Ingredients
-    // Add an ingredient to a recipe
+    
     func addIngredient(to recipe: RecipeEntity, name: String, quantity: String) {
         let ingredient = IngredientEntity(context: container.viewContext)
         ingredient.id = UUID()
         ingredient.name = name
         ingredient.quantity = quantity
         ingredient.sortOrder = Int16((recipe.ingredients?.count ?? 0))
-        ingredient.recipe = recipe // Connect to recipe
+        ingredient.recipe = recipe
         
         saveContext()
         print("✅ Added ingredient: \(name)")
+    }
+    
+    func updateIngredient(_ ingredient: IngredientEntity, name: String, quantity: String) {
+        ingredient.name = name
+        ingredient.quantity = quantity
+        saveContext()
     }
     
     func deleteIngredient(_ ingredient: IngredientEntity) {
@@ -156,8 +192,17 @@ class CoreDataManager: ObservableObject {
         saveContext()
     }
     
+    func reorderIngredients(for recipe: RecipeEntity, from source: IndexSet, to destination: Int) {
+        var items = recipe.ingredientsArray
+        items.move(fromOffsets: source, toOffset: destination)
+        for (index, item) in items.enumerated() {
+            item.sortOrder = Int16(index)
+        }
+        saveContext()
+    }
+    
     // MARK: - Steps
-    // Add a preparation step to a recipe
+    
     func addStep(to recipe: RecipeEntity, instruction: String) {
         let step = StepEntity(context: container.viewContext)
         step.id = UUID()
@@ -169,13 +214,27 @@ class CoreDataManager: ObservableObject {
         print("✅ Added step: \(instruction)")
     }
     
+    func updateStep(_ step: StepEntity, instruction: String) {
+        step.instruction = instruction
+        saveContext()
+    }
+    
     func deleteStep(_ step: StepEntity) {
         container.viewContext.delete(step)
         saveContext()
     }
     
+    func reorderSteps(for recipe: RecipeEntity, from source: IndexSet, to destination: Int) {
+        var items = recipe.stepsArray
+        items.move(fromOffsets: source, toOffset: destination)
+        for (index, item) in items.enumerated() {
+            item.sortOrder = Int16(index)
+        }
+        saveContext()
+    }
+    
     // MARK: - Audio Notes
-    // Add an audio recording to a recipe
+    
     func addAudioNote(to recipe: RecipeEntity, fileName: String, duration: Double) {
         let audioNote = AudioNoteEntity(context: container.viewContext)
         audioNote.id = UUID()
@@ -196,14 +255,33 @@ class CoreDataManager: ObservableObject {
         saveContext()
     }
     
+    // MARK: - Photos
+    
+    func addPhoto(to recipe: RecipeEntity, imageData: Data) {
+        let photo = PhotoEntity(context: container.viewContext)
+        photo.id = UUID()
+        photo.imageData = imageData
+        photo.createdDate = Date()
+        photo.sortOrder = Int16((recipe.photos?.count ?? 0))
+        photo.recipe = recipe
+        
+        saveContext()
+        print("📷 Added photo to recipe")
+    }
+    
+    func deletePhoto(_ photo: PhotoEntity) {
+        container.viewContext.delete(photo)
+        saveContext()
+    }
+    
     // MARK: - Location
-    // Add or update location for a recipe
+    
     func setLocation(for recipe: RecipeEntity, latitude: Double, longitude: Double, name: String) {
         recipe.latitude = latitude
         recipe.longitude = longitude
         recipe.locationName = name
         saveContext()
-        print("📍 Set location: \(name) (\(latitude), \(longitude))")
+        print("📍 Set location: \(name)")
     }
     
     func removeLocation(from recipe: RecipeEntity) {
@@ -211,11 +289,10 @@ class CoreDataManager: ObservableObject {
         recipe.longitude = 0
         recipe.locationName = nil
         saveContext()
-        print("📍 Removed location")
     }
     
     // MARK: - Ancestry Steps
-    // Add an ancestry step to a recipe's timeline
+    
     func addAncestryStep(to recipe: RecipeEntity, country: String, region: String?, roughDate: String?, note: String?, generation: Int16?) {
         let ancestryStep = AncestryStepEntity(context: container.viewContext)
         ancestryStep.id = UUID()
@@ -231,14 +308,32 @@ class CoreDataManager: ObservableObject {
         print("🌍 Added ancestry step: \(country)")
     }
     
+    func updateAncestryStep(_ step: AncestryStepEntity, country: String, region: String?, roughDate: String?, note: String?, generation: Int16?) {
+        step.country = country
+        step.region = region
+        step.roughDate = roughDate
+        step.note = note
+        step.generation = generation ?? 0
+        saveContext()
+    }
+    
     func deleteAncestryStep(_ step: AncestryStepEntity) {
         container.viewContext.delete(step)
         saveContext()
     }
     
+    func reorderAncestrySteps(for recipe: RecipeEntity, from source: IndexSet, to destination: Int) {
+        var items = recipe.ancestryStepsArray
+        items.move(fromOffsets: source, toOffset: destination)
+        for (index, item) in items.enumerated() {
+            item.sortOrder = Int16(index)
+        }
+        saveContext()
+    }
+    
     // MARK: - Private Helpers
-    // Save changes to database
-    private func saveContext() {
+    
+    func saveContext() {
         do {
             try container.viewContext.save()
             print("💾 Saved to database")
@@ -247,32 +342,31 @@ class CoreDataManager: ObservableObject {
         }
     }
     
-    // Delete an audio file from disk
     private func deleteAudioFile(_ fileName: String) {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let filePath = documentsPath.appendingPathComponent(fileName)
         try? FileManager.default.removeItem(at: filePath)
         print("🗑️ Deleted audio file: \(fileName)")
     }
+    
+    func refreshRecipe(_ recipe: RecipeEntity) {
+        container.viewContext.refresh(recipe, mergeChanges: true)
+    }
 }
 
 // MARK: - Helper Extensions
-// These make it easier to work with Core Data relationships
 
 extension RecipeEntity {
-    // Get ingredients as a sorted array (instead of a Set)
     var ingredientsArray: [IngredientEntity] {
         let set = ingredients as? Set<IngredientEntity> ?? []
         return set.sorted { $0.sortOrder < $1.sortOrder }
     }
     
-    // Get steps as a sorted array
     var stepsArray: [StepEntity] {
         let set = steps as? Set<StepEntity> ?? []
         return set.sorted { $0.sortOrder < $1.sortOrder }
     }
     
-    // Get audio notes, newest first
     var audioNotesArray: [AudioNoteEntity] {
         let set = audioNotes as? Set<AudioNoteEntity> ?? []
         return set.sorted {
@@ -280,20 +374,27 @@ extension RecipeEntity {
         }
     }
     
-    // Get ancestry steps, sorted by order (oldest to newest)
     var ancestryStepsArray: [AncestryStepEntity] {
         let set = ancestrySteps as? Set<AncestryStepEntity> ?? []
         return set.sorted { $0.sortOrder < $1.sortOrder }
     }
     
-    // Convert hex color string to SwiftUI Color
+    var photosArray: [PhotoEntity] {
+        let set = photos as? Set<PhotoEntity> ?? []
+        return set.sorted { $0.sortOrder < $1.sortOrder }
+    }
+    
     var displayColor: Color {
         Color(hex: colorHex ?? "#8B4513") ?? .brown
+    }
+    
+    // Get the first/primary audio note for auto-play
+    var primaryAudioNote: AudioNoteEntity? {
+        audioNotesArray.first
     }
 }
 
 // MARK: - Color Extension
-// Allows us to create colors from hex strings like "#FF0000"
 
 extension Color {
     init?(hex: String) {
@@ -310,7 +411,6 @@ extension Color {
         self.init(red: r, green: g, blue: b)
     }
     
-    // Convert Color to hex string
     func toHex() -> String? {
         guard let components = UIColor(self).cgColor.components else { return nil }
         let r = Int(components[0] * 255.0)
