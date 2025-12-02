@@ -97,6 +97,8 @@ struct CreateRecipeView: View {
                 
                 VStack(spacing: 0) {
                     
+
+                    
                     // Main content area
                     if isLandscape {
                         HStack(alignment: .top, spacing: 0) {
@@ -212,9 +214,7 @@ struct CreateRecipeView: View {
                             .padding(.bottom, max(100, keyboardHeight + 20))
                         }
                     }
-                    
-                    // Header with Cancel/Save
-                    headerBar
+                
                     
                     // Save button floating at bottom
                     saveButton(geometry: geometry)
@@ -244,49 +244,49 @@ struct CreateRecipeView: View {
         }
     }
     
-    // MARK: - Header Bar
-        
-        var headerBar: some View {
-            VStack(spacing: 0) {
-                Color.clear
-                    .frame(height: 0)
-                
-                HStack {
-                    Button(action: {
-                        if hasContent {
-                            showingDiscardAlert = true
-                        } else {
-                            dismiss()
-                        }
-                    }) {
-                        Text("Cancel")
-                            .foregroundColor(.brown)
-                    }
-                    .padding(.leading, 20)
-                    
-                    Spacer()
-                    
-                    Text("New Recipe")
-                        .font(.headline)
-                        .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
-                    
-                    Spacer()
-                    
-                    // Invisible spacer for balance
-                    Text("Cancel")
-                        .opacity(0)
-                        .padding(.trailing, 20)
-                }
-                .padding(.top, 50)
-                .padding(.bottom, 10)
-                .background(
-                    Color(red: 0.98, green: 0.97, blue: 0.94)
-                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 2)
-                )
-                
-                Spacer()
-            }
-        }
+//    // MARK: - Header Bar
+//        
+//        var headerBar: some View {
+//            VStack(spacing: 0) {
+//                Color.clear
+//                    .frame(height: 0)
+//                
+//                HStack {
+//                    Button(action: {
+//                        if hasContent {
+//                            showingDiscardAlert = true
+//                        } else {
+//                            dismiss()
+//                        }
+//                    }) {
+//                        Text("Cancel")
+//                            .foregroundColor(.brown)
+//                    }
+//                    .padding(.leading, 20)
+//                    
+//                    Spacer()
+//                    
+//                    Text("New Recipe")
+//                        .font(.headline)
+//                        .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+//                    
+//                    Spacer()
+//                    
+//                    // Invisible spacer for balance
+//                    Text("Cancel")
+//                        .opacity(0)
+//                        .padding(.trailing, 20)
+//                }
+//                .padding(.top, 50)
+//                .padding(.bottom, 10)
+//                .background(
+//                    Color(red: 0.98, green: 0.97, blue: 0.94)
+//                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 2)
+//                )
+//                
+//                Spacer()
+//            }
+//        }
         
         // MARK: - Editable Ancestry Timeline
         
