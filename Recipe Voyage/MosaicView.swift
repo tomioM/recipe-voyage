@@ -12,6 +12,8 @@ struct MosaicView: View {
     
     @State private var selectedRecipe: RecipeEntity?
     @State private var showingCreateRecipe = false
+    @State private var showingEditRecipe = false
+    @State private var recipeToEdit: RecipeEntity?
     @State private var draggedRecipe: RecipeEntity?
     @State private var draggedInboxRecipe: RecipeEntity?
     @State private var showingShareSheet = false
@@ -115,6 +117,9 @@ struct MosaicView: View {
         .fullScreenCover(isPresented: $showingCreateRecipe) {
             CreateRecipeView()
         }
+        .fullScreenCover(item: $recipeToEdit) { recipe in
+            EditRecipeView(recipe: recipe)
+        }
         .onAppear {
             print("👁️ [AUTO-INBOX] MosaicView appeared")
             startAutoInboxTimer()
@@ -132,7 +137,7 @@ struct MosaicView: View {
         print("🟢 [AUTO-INBOX] Timer will fire every 60 seconds")
         
         // Run every 60 seconds for testing (change to 600 for production)
-        autoInboxTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+        autoInboxTimer = Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { _ in
             print("⏰ [AUTO-INBOX] Timer fired!")
             self.checkAndMoveToInbox()
         }
@@ -393,6 +398,12 @@ struct MosaicView: View {
                         newlyAddedRecipeIDs: $newlyAddedRecipeIDs
                     ))
                     .contextMenu {
+                        Button {
+                            recipeToEdit = recipe
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        
                         Button(role: .destructive) {
                             withAnimation {
                                 dataManager.deleteRecipe(recipe)
