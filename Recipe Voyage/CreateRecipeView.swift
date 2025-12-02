@@ -27,8 +27,7 @@ struct AccentColorOption: Identifiable {
     
     static let options: [AccentColorOption] = [
         AccentColorOption(name: "Classic Brown", hexColor: "#8B4513", color: Color(red: 0.545, green: 0.271, blue: 0.075)),
-        AccentColorOption(name: "Deep Burgundy", hexColor: "#800020", color: Color(red: 0.502, green: 0.0, blue: 0.125)),
-        AccentColorOption(name: "Forest Green", hexColor: "#228B22", color: Color(red: 0.133, green: 0.545, blue: 0.133)),
+        AccentColorOption(name: "Burgundy", hexColor: "#800020", color: Color(red: 0.502, green: 0.0, blue: 0.125)),
         AccentColorOption(name: "Navy Blue", hexColor: "#000080", color: Color(red: 0.0, green: 0.0, blue: 0.502)),
         AccentColorOption(name: "Royal Purple", hexColor: "#6B3FA0", color: Color(red: 0.420, green: 0.247, blue: 0.627)),
         AccentColorOption(name: "Burnt Orange", hexColor: "#CC5500", color: Color(red: 0.8, green: 0.333, blue: 0.0)),
@@ -50,9 +49,13 @@ struct CreateRecipeView: View {
     @ObservedObject var dataManager = CoreDataManager.shared
     @StateObject private var audioManager = AudioManager()
     
+    // Keyboard visibility
+    @State private var keyboardHeight: CGFloat = 0
+    
     // Recipe data being edited
     @State private var title: String = ""
     @State private var description: String = ""
+    @State private var owner: String = ""
     @State private var ingredients: [EditableIngredient] = []
     @State private var steps: [EditableStep] = []
     @State private var ancestrySteps: [EditableAncestry] = []
@@ -77,7 +80,7 @@ struct CreateRecipeView: View {
     }
     
     var hasContent: Bool {
-        !title.isEmpty || !description.isEmpty || !ingredients.isEmpty || !steps.isEmpty || recordedFileName != nil
+        !title.isEmpty || !description.isEmpty || !owner.isEmpty || !ingredients.isEmpty || !steps.isEmpty || recordedFileName != nil
     }
     
     // Get the current accent color
@@ -129,9 +132,9 @@ struct CreateRecipeView: View {
                                     .cornerRadius(16)
                                 }
                                 .padding(20)
-                                .padding(.bottom, 120)
-                            }
-                            .frame(width: geometry.size.width * (isLandscapeiPad ? 0.7 : 0.65))
+                                .padding(.bottom, max(120, keyboardHeight + 20))
+                                }
+                                .frame(width: geometry.size.width * (isLandscapeiPad ? 0.7 : 0.65))
                             
                             Divider()
                             
@@ -142,8 +145,6 @@ struct CreateRecipeView: View {
                         // Portrait layout
                         ScrollView {
                             VStack(spacing: 24) {
-                                Spacer()
-                                    .frame(height: 70)
                                 // Recipe Content Block
                                 VStack(spacing: 16) {
                                     Text("RECIPE")
@@ -208,10 +209,9 @@ struct CreateRecipeView: View {
                                 .cornerRadius(16)
                                 .padding(.horizontal, 16)
                             }
-                            .padding(.bottom, 100)
-                        }
-                    }
-                }
+                            .padding(.bottom, max(100, keyboardHeight + 20))
+                            }
+                            }
                 
                 // Header with Cancel/Save
                 headerBar
@@ -229,12 +229,27 @@ struct CreateRecipeView: View {
         } message: {
             Text("You have unsaved changes. Are you sure you want to discard this recipe?")
         }
+        .onAppear {
+            // Listen for keyboard notifications
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardHeight = keyboardFrame.height
+                }
+            }
+            
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardHeight = 0
+            }
+        }
     }
     
     // MARK: - Header Bar
     
     private var headerBar: some View {
-        VStack {
+        VStack(spacing: 0) {
+            Color.clear
+                .frame(height: 0)
+            
             HStack {
                 Button(action: {
                     if hasContent {
@@ -263,7 +278,10 @@ struct CreateRecipeView: View {
             }
             .padding(.top, 50)
             .padding(.bottom, 10)
-            .background(Color(red: 0.98, green: 0.97, blue: 0.94).opacity(0.95))
+            .background(
+                Color(red: 0.98, green: 0.97, blue: 0.94)
+                    .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 2)
+            )
             
             Spacer()
         }
@@ -271,13 +289,13 @@ struct CreateRecipeView: View {
     
     // MARK: - Editable Ancestry Timeline
     
-    private var editableAncestryTimeline: some View {
+    var editableAncestryTimeline: some View {
         VStack(spacing: 0) {
             ancestryTimelineContent
         }
     }
     
-    private var ancestryTimelineContent: some View {
+    var ancestryTimelineContent: some View {
         HStack(spacing: 0) {
             playPauseButton
             ancestryCardsScrollView
@@ -287,7 +305,7 @@ struct CreateRecipeView: View {
     // MARK: - Subviews
 
     @ViewBuilder
-    private var playPauseButton: some View {
+    var playPauseButton: some View {
         if let fileName = recordedFileName {
             Button(action: { audioManager.togglePlayback(fileName: fileName) }) {
                 Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
@@ -298,7 +316,7 @@ struct CreateRecipeView: View {
         }
     }
 
-    private var ancestryCardsScrollView: some View {
+    var ancestryCardsScrollView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(Array(ancestrySteps.enumerated()), id: \.element.id) { index, step in
@@ -340,7 +358,7 @@ struct CreateRecipeView: View {
         }
     }
 
-    private var addOriginButton: some View {
+    var addOriginButton: some View {
         Button(action: { withAnimation { ancestrySteps.append(EditableAncestry()) } }) {
             VStack(spacing: 6) {
                 Image(systemName: "plus.circle.fill")
@@ -362,12 +380,26 @@ struct CreateRecipeView: View {
     
     // MARK: - Recipe Editor Content
     
-    private var recipeEditorContent: some View {
+    var recipeEditorContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             // Title field (inline editable)
             TextField("Recipe Title", text: $title)
                 .font(.system(size: isLandscapeiPad ? 32 : 26, weight: .bold))
                 .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+            
+            // Owner field (small, optional)
+            TextField("Owner (optional)", text: $owner)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.white.opacity(0.5))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.brown.opacity(0.2), lineWidth: 1)
+                        )
+                )
             
             // Description field
             ZStack(alignment: .topLeading) {
@@ -399,7 +431,7 @@ struct CreateRecipeView: View {
     
     // MARK: - Ingredients Editor
     
-    private var ingredientsEditor: some View {
+    var ingredientsEditor: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Ingredients")
                 .font(.system(size: 20, weight: .semibold))
@@ -432,7 +464,7 @@ struct CreateRecipeView: View {
     
     // MARK: - Steps Editor
     
-    private var stepsEditor: some View {
+    var stepsEditor: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Instructions")
                 .font(.system(size: 20, weight: .semibold))
@@ -503,7 +535,7 @@ struct CreateRecipeView: View {
     
     // MARK: - Compact Ancestry Timeline
     
-    private var editableAncestryTimelineCompact: some View {
+    var editableAncestryTimelineCompact: some View {
         VStack(spacing: 12) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -519,7 +551,7 @@ struct CreateRecipeView: View {
     
     // MARK: - Audio Recorder Widget
     
-    private var audioRecorderWidget: some View {
+    var audioRecorderWidget: some View {
         VStack(spacing: 16) {
             // Recording visualization
             ZStack {
@@ -616,7 +648,7 @@ struct CreateRecipeView: View {
     
     // MARK: - Combined Customization Picker
     
-    private var combinedCustomizationPicker: some View {
+    var combinedCustomizationPicker: some View {
         VStack(spacing: 20) {
             // Preview
             if let firstLetter = title.first {
@@ -731,30 +763,36 @@ struct CreateRecipeView: View {
         VStack {
             Spacer()
             
-            Button(action: saveRecipe) {
-                Text("Save Recipe")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(title.isEmpty ? Color.gray : Color.brown)
-                    )
+            // Only show button when keyboard is not visible
+            if keyboardHeight == 0 {
+                Button(action: saveRecipe) {
+                    Text("Save Recipe")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 16)
+                        .padding(.horizontal, 32)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(title.isEmpty ? Color.gray : Color.brown)
+                        )
+                }
+                .disabled(title.isEmpty)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.bottom, max(geometry.safeAreaInsets.bottom, 16) + 16)
+                .background(
+                    Color(red: 0.98, green: 0.97, blue: 0.94)
+                        .ignoresSafeArea(edges: .bottom)
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .disabled(title.isEmpty)
-            .padding(.horizontal, 20)
-            .padding(.bottom, max(geometry.safeAreaInsets.bottom, 16) + 16)
-            .background(
-                Color(red: 0.98, green: 0.97, blue: 0.94)
-                    .ignoresSafeArea(edges: .bottom)
-            )
         }
+        .animation(.easeInOut(duration: 0.25), value: keyboardHeight)
     }
     
     // MARK: - Save Recipe
     
-    private func saveRecipe() {
+    func saveRecipe() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         
@@ -768,6 +806,11 @@ struct CreateRecipeView: View {
         
         // Set the decorative font
         recipe.decorativeCapFont = selectedDecorativeFont
+        
+        // Set the owner if provided
+        if !owner.isEmpty {
+            recipe.ownerName = owner
+        }
         
         // Add ingredients
         for ingredient in ingredients where !ingredient.name.isEmpty {
