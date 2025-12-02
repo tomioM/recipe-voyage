@@ -1,4 +1,6 @@
 import SwiftUI
+import UniformTypeIdentifiers
+import AVFoundation
 
 // MARK: - Configuration Models
 
@@ -86,6 +88,7 @@ struct CreateRecipeView: View {
     @State private var recordedFileName: String?
     @State private var recordedDuration: TimeInterval = 0
     @State private var isRecording = false
+    @State private var showingAudioPicker = false
     
     // MARK: - UI State
     @State private var keyboardHeight: CGFloat = 0
@@ -140,6 +143,13 @@ struct CreateRecipeView: View {
             Button("Keep Editing", role: .cancel) {}
         } message: {
             Text("You have unsaved changes. Are you sure you want to discard this recipe?")
+        }
+        .fileImporter(
+            isPresented: $showingAudioPicker,
+            allowedContentTypes: [.audio],
+            allowsMultipleSelection: false
+        ) { result in
+            handleAudioFilePicked(result: result)
         }
         .onAppear(perform: setupKeyboardObservers)
     }
@@ -412,8 +422,16 @@ struct CreateRecipeView: View {
     
     private var audioRecorderWidget: some View {
         VStack(spacing: 16) {
-            recordingVisualization
-            recordingStatus
+            // Choice buttons - Record or Pick File
+            if recordedFileName == nil && !isRecording {
+                audioChoiceButtons
+            }
+            
+            // Recording visualization (when recording or when file is selected)
+            if isRecording || recordedFileName != nil {
+                recordingVisualization
+                recordingStatus
+            }
         }
         .padding(20)
         .background(
@@ -421,6 +439,74 @@ struct CreateRecipeView: View {
                 .fill(Color.white)
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
         )
+    }
+    
+    private var audioChoiceButtons: some View {
+        VStack(spacing: 12) {
+            Text("Add Audio")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
+            
+            HStack(spacing: 16) {
+                // Record button
+                Button(action: toggleRecording) {
+                    VStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.brown.opacity(0.1))
+                                .frame(width: 60, height: 60)
+                            
+                            Image(systemName: "mic.circle.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.brown)
+                        }
+                        
+                        Text("Record")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.brown)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.brown.opacity(0.3), lineWidth: 2)
+                            )
+                    )
+                }
+                
+                // Pick file button
+                Button(action: { showingAudioPicker = true }) {
+                    VStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.brown.opacity(0.1))
+                                .frame(width: 60, height: 60)
+                            
+                            Image(systemName: "folder.circle.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.brown)
+                        }
+                        
+                        Text("Choose File")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.brown)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.brown.opacity(0.3), lineWidth: 2)
+                            )
+                    )
+                }
+            }
+        }
     }
     
     private var recordingVisualization: some View {
@@ -431,24 +517,24 @@ struct CreateRecipeView: View {
                 .scaleEffect(isRecording ? 1.1 : 1.0)
                 .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isRecording)
             
-            Button(action: toggleRecording) {
-                ZStack {
-                    Circle()
-                        .fill(isRecording ? Color.red : Color.brown)
-                        .frame(width: 80, height: 80)
-                    
-                    if isRecording {
+            if isRecording {
+                Button(action: toggleRecording) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 80, height: 80)
+                        
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.white)
                             .frame(width: 24, height: 24)
-                    } else {
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 30, height: 30)
                     }
                 }
+                .buttonStyle(ScaleButtonStyle())
+            } else if recordedFileName != nil {
+                Image(systemName: "waveform.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.brown)
             }
-            .buttonStyle(ScaleButtonStyle())
         }
     }
     
@@ -460,15 +546,11 @@ struct CreateRecipeView: View {
                 .foregroundColor(.red)
         } else if let fileName = recordedFileName {
             recordedAudioControls(fileName: fileName)
-        } else {
-            Text("Tap to record")
-                .font(.system(size: 16))
-                .foregroundColor(.gray)
         }
     }
     
     private func recordedAudioControls(fileName: String) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Button(action: { audioManager.togglePlayback(fileName: fileName) }) {
                     Image(systemName: audioManager.isPlaying ? "stop.circle.fill" : "play.circle.fill")
@@ -487,9 +569,24 @@ struct CreateRecipeView: View {
                 }
             }
             
-            Text("Recording saved")
+            Text("Audio saved")
                 .font(.caption)
                 .foregroundColor(.green)
+            
+            // Add option to replace with new audio
+            Button(action: { 
+                deleteRecording()
+            }) {
+                Text("Replace Audio")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.brown)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.brown.opacity(0.3), lineWidth: 1)
+                    )
+            }
         }
     }
     
@@ -670,6 +767,46 @@ struct CreateRecipeView: View {
     private func deleteRecording() {
         recordedFileName = nil
         recordedDuration = 0
+    }
+    
+    private func handleAudioFilePicked(result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let sourceURL = urls.first else { return }
+            
+            // Copy the audio file to the app's documents directory
+            let fileName = "imported_\(UUID().uuidString).\(sourceURL.pathExtension)"
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let destinationURL = documentsPath.appendingPathComponent(fileName)
+            
+            do {
+                // Start accessing security-scoped resource
+                guard sourceURL.startAccessingSecurityScopedResource() else {
+                    print("❌ Failed to access security-scoped resource")
+                    return
+                }
+                defer { sourceURL.stopAccessingSecurityScopedResource() }
+                
+                // Copy the file
+                try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+                
+                // Get the duration of the audio file
+                let asset = AVURLAsset(url: destinationURL)
+                let duration = CMTimeGetSeconds(asset.duration)
+                
+                // Update state
+                recordedFileName = fileName
+                recordedDuration = duration
+                
+                print("✅ Audio file imported: \(fileName), duration: \(duration)")
+                
+            } catch {
+                print("❌ Failed to import audio file: \(error)")
+            }
+            
+        case .failure(let error):
+            print("❌ File picker error: \(error)")
+        }
     }
     
     private func saveRecipe() {

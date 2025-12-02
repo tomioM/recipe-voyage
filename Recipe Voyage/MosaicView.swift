@@ -20,6 +20,9 @@ struct MosaicView: View {
     // Track newly added recipes for animation
     @State private var newlyAddedRecipeIDs: Set<UUID> = []
     
+    // Timer for auto-inbox feature
+    @State private var autoInboxTimer: Timer?
+    
     // Detect if we're in landscape iPad
     var isLandscapeiPad: Bool {
         horizontalSizeClass == .regular && verticalSizeClass == .regular
@@ -75,6 +78,21 @@ struct MosaicView: View {
                     Spacer()
                     HStack {
                         Spacer()
+                        
+                        // DEBUG: Manual test button (remove in production)
+                        Button(action: {
+                            print("🔘 [DEBUG] Manual test button pressed")
+                            checkAndMoveToInbox()
+                        }) {
+                            Text("Test")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(Color.blue))
+                        }
+                        .padding(.trailing, 8)
+                        
                         Button(action: {
                             showingCreateRecipe = true
                         }) {
@@ -96,6 +114,75 @@ struct MosaicView: View {
         }
         .fullScreenCover(isPresented: $showingCreateRecipe) {
             CreateRecipeView()
+        }
+        .onAppear {
+            print("👁️ [AUTO-INBOX] MosaicView appeared")
+            startAutoInboxTimer()
+        }
+        .onDisappear {
+            print("👁️ [AUTO-INBOX] MosaicView disappeared")
+            stopAutoInboxTimer()
+        }
+    }
+    
+    // MARK: - Auto-Inbox Timer
+    
+    private func startAutoInboxTimer() {
+        print("🟢 [AUTO-INBOX] Starting timer...")
+        print("🟢 [AUTO-INBOX] Timer will fire every 60 seconds")
+        
+        // Run every 60 seconds for testing (change to 600 for production)
+        autoInboxTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            print("⏰ [AUTO-INBOX] Timer fired!")
+            self.checkAndMoveToInbox()
+        }
+        
+        print("🟢 [AUTO-INBOX] Timer started successfully: \(autoInboxTimer != nil)")
+    }
+    
+    private func stopAutoInboxTimer() {
+        print("🔴 [AUTO-INBOX] Stopping timer...")
+        autoInboxTimer?.invalidate()
+        autoInboxTimer = nil
+        print("🔴 [AUTO-INBOX] Timer stopped")
+    }
+    
+    private func checkAndMoveToInbox() {
+        print("📋 [AUTO-INBOX] checkAndMoveToInbox() called")
+        
+        print("📋 [AUTO-INBOX] Inbox recipes count: \(dataManager.inboxRecipes.count)")
+        print("📋 [AUTO-INBOX] Mosaic recipes count: \(dataManager.recipes.count)")
+        
+        // Only move a recipe if inbox is empty and there are recipes in the mosaic
+        guard dataManager.inboxRecipes.isEmpty,
+              !dataManager.recipes.isEmpty else {
+            print("⚠️ [AUTO-INBOX] Conditions not met - skipping move")
+            return
+        }
+        
+        print("✅ [AUTO-INBOX] Conditions met! Selecting random recipe...")
+        
+        if let randomRecipe = dataManager.recipes.randomElement() {
+            print("🎲 [AUTO-INBOX] Selected recipe: \(randomRecipe.title ?? "Untitled")")
+            print("🎲 [AUTO-INBOX] Current isInInbox state: \(randomRecipe.isInInbox)")
+            
+            // Set the recipe as inboxed (USE CORRECT PROPERTY NAME)
+            print("🔄 [AUTO-INBOX] Setting isInInbox to true...")
+            randomRecipe.isInInbox = true
+            
+            print("💾 [AUTO-INBOX] Saving context...")
+            dataManager.saveContext()
+            
+            print("🔄 [AUTO-INBOX] Fetching recipes...")
+            dataManager.fetchRecipes()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                print("📊 [AUTO-INBOX] After move - Inbox count: \(self.dataManager.inboxRecipes.count)")
+                print("📊 [AUTO-INBOX] After move - Mosaic count: \(self.dataManager.recipes.count)")
+                print("✅ [AUTO-INBOX] Recipe moved to inbox successfully!")
+            }
+        } else {
+            print("❌ [AUTO-INBOX] Failed to select random recipe")
         }
     }
     
@@ -732,21 +819,22 @@ struct MosaicView: View {
                     .fill(accentColor.opacity(0.15))
                 
                 // Card content
-                HStack(spacing: 0) {
-                    // LEFT COLUMN: Decorative capital
-                    VStack {
-                        Spacer()
+                VStack(spacing: 0) {
+                    // Two columns: decorative capital and title
+                    HStack(spacing: 0) {
+                        // LEFT COLUMN: Decorative capital
+                        VStack {
+                            Spacer()
+                            
+                            Text(firstLetter)
+                                .font(.custom(recipe.decorativeCapFont ?? "Didot", size: min(width, height) * 0.35))
+                                .foregroundColor(accentColor)
+                            
+                            Spacer()
+                        }
+                        .frame(width: leftColumnWidth)
                         
-                        Text(firstLetter)
-                            .font(.custom(recipe.decorativeCapFont ?? "Didot", size: min(width, height) * 0.35))
-                            .foregroundColor(accentColor)
-                        
-                        Spacer()
-                    }
-                    .frame(width: leftColumnWidth)
-                    
-                    // RIGHT COLUMN: Title
-                    VStack(spacing: 0) {
+                        // RIGHT COLUMN: Title
                         VStack(alignment: .leading, spacing: 8) {
                             Spacer()
                             
@@ -761,14 +849,14 @@ struct MosaicView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .frame(maxHeight: .infinity)
-                        
-                        // BOTTOM: Owner info line
-                        ownerInfoLine
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 8)
+                        .frame(width: rightColumnWidth)
                     }
-                    .frame(width: rightColumnWidth)
+                    .frame(maxHeight: .infinity)
+                    
+                    // BOTTOM: Owner info line (full width)
+                    ownerInfoLine
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 8)
                 }
                 
                 // Border
@@ -782,30 +870,6 @@ struct MosaicView: View {
         
         private var ownerInfoLine: some View {
             HStack(spacing: 6) {
-                // Owner profile photo (circular) - loaded from Assets
-                if let owner = recipe.owner,
-                   let photoName = owner.profilePhotoName {
-                    Image(photoName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 20, height: 20)
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(Color.brown.opacity(0.3), lineWidth: 1)
-                        )
-                } else {
-                    // Placeholder profile photo
-                    Circle()
-                        .fill(Color.brown.opacity(0.2))
-                        .frame(width: 20, height: 20)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.brown.opacity(0.5))
-                        )
-                }
-                
                 // Owner name
                 Text(displayOwnerName)
                     .font(.system(size: 9, weight: .medium))
