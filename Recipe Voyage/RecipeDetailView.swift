@@ -18,6 +18,11 @@ struct RecipeDetailView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showingPhotoPicker = false
     
+    // Cache the steps array to prevent re-computation and ensure stability
+    @State private var cachedSteps: [StepEntity] = []
+    @State private var cachedIngredients: [IngredientEntity] = []
+    @State private var cachedAncestrySteps: [AncestryStepEntity] = []
+    
     var isLandscape: Bool {
         horizontalSizeClass == .regular || verticalSizeClass == .compact
     }
@@ -54,12 +59,15 @@ struct RecipeDetailView: View {
                 
                 // Floating audio player at bottom
                 if recipe.primaryAudioNote != nil {
-                    floatingAudioPlayer(geometry: geometry)
+                    AudioPlayerView(audioManager: audioManager, audioNote: recipe.primaryAudioNote!, geometry: geometry)
                 }
             }
             .ignoresSafeArea()
         }
         .onAppear {
+            // Cache the arrays to ensure stability
+            loadCachedData()
+            
             // Auto-play audio when view appears
             if let audioNote = recipe.primaryAudioNote,
                let fileName = audioNote.audioFileName {
@@ -80,6 +88,13 @@ struct RecipeDetailView: View {
                 }
             }
         }
+    }
+    
+    // Load and cache data to prevent flickering
+    private func loadCachedData() {
+        cachedSteps = recipe.stepsArray
+        cachedIngredients = recipe.ingredientsArray
+        cachedAncestrySteps = recipe.ancestryStepsArray
     }
     
     // MARK: - Header Section
@@ -111,7 +126,7 @@ struct RecipeDetailView: View {
                     .padding(.top, 24)
                 
                 // History/Ancestry Section
-                if !recipe.ancestryStepsArray.isEmpty {
+                if !cachedAncestrySteps.isEmpty {
                     ancestrySection
                         .padding(.horizontal, 32)
                 }
@@ -123,7 +138,7 @@ struct RecipeDetailView: View {
                 }
                 
                 // Instructions
-                if !recipe.stepsArray.isEmpty {
+                if !cachedSteps.isEmpty {
                     instructionsSection
                         .padding(.horizontal, 32)
                 }
@@ -152,9 +167,9 @@ struct RecipeDetailView: View {
                     .tracking(2)
                     .padding(.top, 24)
                 
-                if !recipe.ingredientsArray.isEmpty {
+                if !cachedIngredients.isEmpty {
                     VStack(alignment: .leading, spacing: 20) {
-                        ForEach(recipe.ingredientsArray) { ingredient in
+                        ForEach(cachedIngredients) { ingredient in
                             ingredientRow(ingredient)
                         }
                     }
@@ -272,106 +287,12 @@ struct RecipeDetailView: View {
                 .foregroundColor(.brown.opacity(0.6))
                 .tracking(2)
             
-            compactAncestryTimelineContent
+            CompactAncestryTimelineView(
+                ancestrySteps: cachedAncestrySteps,
+                audioManager: audioManager,
+                audioNote: recipe.primaryAudioNote
+            )
         }
-    }
-    
-    private var compactAncestryTimelineContent: some View {
-        HStack(spacing: 0) {
-            // Play/Pause button on the left (if audio exists)
-            if let audioNote = recipe.primaryAudioNote,
-               let fileName = audioNote.audioFileName {
-                Button(action: {
-                    audioManager.togglePlayback(fileName: fileName)
-                }) {
-                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.brown)
-                }
-                .padding(.trailing, 16)
-            }
-            
-            // Ancestry timeline
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(Array(recipe.ancestryStepsArray.enumerated()), id: \.element.id) { index, step in
-                        HStack(spacing: 12) {
-                            // Ancestry step card
-                            VStack(alignment: .leading, spacing: 10) {
-                                // Header label
-                                Text("ORIGIN \(index + 1)")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.brown.opacity(0.5))
-                                    .tracking(1)
-                                
-                                // Country
-                                Text(step.country ?? "Unknown")
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(Color(red: 0.25, green: 0.15, blue: 0.08))
-                                
-                                // Region (if not empty)
-                                if let region = step.region, !region.isEmpty {
-                                    Text(region)
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.brown.opacity(0.8))
-                                }
-                                
-                                // Date (if not empty)
-                                if let date = step.roughDate, !date.isEmpty {
-                                    Text(date)
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.gray.opacity(0.9))
-                                        .italic()
-                                        .padding(.top, 4)
-                                }
-                                
-                                // Note (if not empty)
-                                if let note = step.note, !note.isEmpty {
-                                    Text(note)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
-                                        .lineLimit(4)
-                                        .padding(.top, 4)
-                                }
-                            }
-                            .padding(20)
-                            .frame(minWidth: 220)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white.opacity(0.9))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.brown.opacity(0.3), lineWidth: 2)
-                                    )
-                                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
-                            )
-                            
-                            // Arrow connector
-                            if index < recipe.ancestryStepsArray.count - 1 {
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.brown.opacity(0.5))
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.brown.opacity(0.08),
-                            Color.brown.opacity(0.04)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
     }
     
     // MARK: - Description Section
@@ -401,7 +322,8 @@ struct RecipeDetailView: View {
                 .tracking(2)
             
             VStack(alignment: .leading, spacing: 24) {
-                ForEach(Array(recipe.stepsArray.enumerated()), id: \.element.id) { index, step in
+                // Use cached steps and proper ID to prevent flickering
+                ForEach(Array(cachedSteps.enumerated()), id: \.offset) { index, step in
                     stepRow(index: index, step: step)
                 }
             }
@@ -439,6 +361,7 @@ struct RecipeDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 6)
         }
+        .id("\(step.id?.uuidString ?? "")-\(index)") // Stable ID
     }
     
     // MARK: - Ingredient Row
@@ -540,97 +463,208 @@ struct RecipeDetailView: View {
             }
         }
     }
+}
+
+// MARK: - Compact Ancestry Timeline View (Isolated to prevent re-renders)
+
+struct CompactAncestryTimelineView: View {
+    let ancestrySteps: [AncestryStepEntity]
+    @ObservedObject var audioManager: AudioManager
+    let audioNote: AudioNoteEntity?
     
-    // MARK: - Floating Audio Player
+    var body: some View {
+        HStack(spacing: 0) {
+            // Play/Pause button on the left (if audio exists)
+            if let audioNote = audioNote,
+               let fileName = audioNote.audioFileName {
+                Button(action: {
+                    audioManager.togglePlayback(fileName: fileName)
+                }) {
+                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.brown)
+                }
+                .padding(.trailing, 16)
+            }
+            
+            // Ancestry timeline
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(Array(ancestrySteps.enumerated()), id: \.offset) { index, step in
+                        HStack(spacing: 12) {
+                            // Ancestry step card
+                            VStack(alignment: .leading, spacing: 10) {
+                                // Header label
+                                Text("ORIGIN \(index + 1)")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.brown.opacity(0.5))
+                                    .tracking(1)
+                                
+                                // Country
+                                Text(step.country ?? "Unknown")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(Color(red: 0.25, green: 0.15, blue: 0.08))
+                                
+                                // Region (if not empty)
+                                if let region = step.region, !region.isEmpty {
+                                    Text(region)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.brown.opacity(0.8))
+                                }
+                                
+                                // Date (if not empty)
+                                if let date = step.roughDate, !date.isEmpty {
+                                    Text(date)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray.opacity(0.9))
+                                        .italic()
+                                        .padding(.top, 4)
+                                }
+                                
+                                // Note (if not empty)
+                                if let note = step.note, !note.isEmpty {
+                                    Text(note)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.2))
+                                        .lineLimit(4)
+                                        .padding(.top, 4)
+                                }
+                            }
+                            .padding(20)
+                            .frame(minWidth: 220)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.9))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.brown.opacity(0.3), lineWidth: 2)
+                                    )
+                                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
+                            )
+                            
+                            // Arrow connector
+                            if index < ancestrySteps.count - 1 {
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.brown.opacity(0.5))
+                            }
+                        }
+                        .id("\(step.id?.uuidString ?? "")-\(index)")
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.brown.opacity(0.08),
+                            Color.brown.opacity(0.04)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+    }
+}
+
+// MARK: - Audio Player View (Isolated to prevent unnecessary re-renders)
+
+struct AudioPlayerView: View {
+    @ObservedObject var audioManager: AudioManager
+    let audioNote: AudioNoteEntity
+    let geometry: GeometryProxy
     
-    private func floatingAudioPlayer(geometry: GeometryProxy) -> some View {
+    var body: some View {
         VStack {
             Spacer()
             
-            if let audioNote = recipe.primaryAudioNote {
-                HStack(spacing: 20) {
-                    // Play/Pause button
-                    Button(action: {
-                        if let fileName = audioNote.audioFileName {
-                            audioManager.togglePlayback(fileName: fileName)
-                        }
-                    }) {
-                        Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 48))
-                            .foregroundColor(.brown)
+            HStack(spacing: 20) {
+                // Play/Pause button
+                Button(action: {
+                    if let fileName = audioNote.audioFileName {
+                        audioManager.togglePlayback(fileName: fileName)
                     }
-                    
-                    // Progress and time
-                    VStack(alignment: .leading, spacing: 10) {
-                        // Progress bar
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                // Background track
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.gray.opacity(0.25))
-                                    .frame(height: 10)
-                                
-                                // Progress fill
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color.brown,
-                                                Color.brown.opacity(0.8)
-                                            ]),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
+                }) {
+                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.brown)
+                }
+                
+                // Progress and time
+                VStack(alignment: .leading, spacing: 10) {
+                    // Progress bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            // Background track
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.gray.opacity(0.25))
+                                .frame(height: 10)
+                            
+                            // Progress fill
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.brown,
+                                            Color.brown.opacity(0.8)
+                                        ]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
                                     )
-                                    .frame(
-                                        width: geo.size.width * CGFloat(audioManager.currentTime / max(audioNote.duration, 0.1)),
-                                        height: 10
-                                    )
-                            }
-                            .gesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { value in
-                                        let progress = max(0, min(1, value.location.x / geo.size.width))
-                                        let seekTime = Double(progress) * audioNote.duration
-                                        audioManager.seek(to: seekTime)
-                                    }
-                            )
+                                )
+                                .frame(
+                                    width: geo.size.width * CGFloat(audioManager.currentTime / max(audioNote.duration, 0.1)),
+                                    height: 10
+                                )
                         }
-                        .frame(height: 10)
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    let progress = max(0, min(1, value.location.x / geo.size.width))
+                                    let seekTime = Double(progress) * audioNote.duration
+                                    audioManager.seek(to: seekTime)
+                                }
+                        )
+                    }
+                    .frame(height: 10)
+                    
+                    // Time labels
+                    HStack {
+                        Text(audioManager.formatDuration(audioManager.currentTime))
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .foregroundColor(.gray)
                         
-                        // Time labels
-                        HStack {
-                            Text(audioManager.formatDuration(audioManager.currentTime))
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                .foregroundColor(.gray)
-                            
-                            Spacer()
-                            
-                            Text(audioManager.formatDuration(audioNote.duration))
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    
-                    // Stop button
-                    Button(action: {
-                        audioManager.stopPlayback()
-                    }) {
-                        Image(systemName: "stop.circle")
-                            .font(.system(size: 36))
-                            .foregroundColor(.brown.opacity(0.7))
+                        Spacer()
+                        
+                        Text(audioManager.formatDuration(audioNote.duration))
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .foregroundColor(.gray)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: -4)
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, geometry.safeAreaInsets.bottom + 12)
+                
+                // Stop button
+                Button(action: {
+                    audioManager.stopPlayback()
+                }) {
+                    Image(systemName: "stop.circle")
+                        .font(.system(size: 36))
+                        .foregroundColor(.brown.opacity(0.7))
+                }
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white)
+                    .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: -4)
+            )
+            .padding(.horizontal, 20)
+            .padding(.bottom, geometry.safeAreaInsets.bottom + 12)
         }
     }
 }
