@@ -124,6 +124,9 @@ struct CreateRecipeView: View {
                 backgroundView
                 
                 VStack(spacing: 0) {
+                    // Top bar with cancel button
+                    topBar
+                    
                     if isLandscape {
                         landscapeLayout(geometry: geometry)
                     } else {
@@ -134,7 +137,7 @@ struct CreateRecipeView: View {
                         saveButton(geometry: geometry)
                     }
                 }
-                .ignoresSafeArea()
+                .ignoresSafeArea(edges: .bottom)
             }
         }
         .alert("Discard Recipe?", isPresented: $showingDiscardAlert) {
@@ -158,6 +161,34 @@ struct CreateRecipeView: View {
     private var backgroundView: some View {
         Color(red: 0.98, green: 0.97, blue: 0.94)
             .ignoresSafeArea()
+    }
+    
+    private var topBar: some View {
+        HStack {
+            Button(action: {
+                if hasContent {
+                    showingDiscardAlert = true
+                } else {
+                    dismiss()
+                }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Cancel")
+                        .font(.system(size: 17, weight: .regular))
+                }
+                .foregroundColor(.brown)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 4)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .background(Color(red: 0.98, green: 0.97, blue: 0.94))
     }
     
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
@@ -233,16 +264,16 @@ struct CreateRecipeView: View {
                 .font(.system(size: isLandscapeiPad ? 32 : 26, weight: .bold))
                 .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
             
-            TextField("Owner (optional)", text: $owner)
-                .font(.system(size: 14))
-                .foregroundColor(.gray)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white.opacity(0.5))
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.brown.opacity(0.2), lineWidth: 1))
-                )
-            
+//            TextField("Owner (optional)", text: $owner)
+//                .font(.system(size: 14))
+//                .foregroundColor(.gray)
+//                .padding(8)
+//                .background(
+//                    RoundedRectangle(cornerRadius: 6)
+//                        .fill(Color.white.opacity(0.5))
+//                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.brown.opacity(0.2), lineWidth: 1))
+//                )
+//            
             descriptionEditor
             ingredientsEditor
             stepsEditor
