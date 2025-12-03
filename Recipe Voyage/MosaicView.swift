@@ -95,15 +95,29 @@ struct MosaicView: View {
 //                        }
 //                        .padding(.trailing, 8)
                         
-                        Button(action: {
-                            showingCreateRecipe = true
-                        }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 24, weight: .semibold))
+                        VStack(alignment: .trailing, spacing: 8) {
+                            // Prompt bubble
+                            Text("Add your own recipes!")
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.white)
-                                .frame(width: 60, height: 60)
-                                .background(Circle().fill(Color.brown))
-                                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.brown.opacity(0.9))
+                                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                                )
+                            
+                            Button(action: {
+                                showingCreateRecipe = true
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 60, height: 60)
+                                    .background(Circle().fill(Color.brown))
+                                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                            }
                         }
                         .padding(24)
                     }
@@ -244,6 +258,29 @@ struct MosaicView: View {
             
             Spacer()
             
+            // Drag hint at bottom
+            VStack(spacing: 8) {
+                Text("Drag recipes into the mosaic")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.black.opacity(0.5))
+                    )
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(8)
+                    .background(Circle().fill(Color.black.opacity(0.5)))
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            }
+            .padding(.bottom, 20)
+            
             // Share/Export area at bottom
             Image("letter")
                 .resizable()
@@ -308,6 +345,23 @@ struct MosaicView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
                 }
+            }
+            
+            // Drag hint for portrait mode
+            HStack {
+                Spacer()
+                Text("You've got mail! Drag into mosaic below")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.black.opacity(0.5))
+                    )
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                    .padding(.bottom, 8)
+                Spacer()
             }
         }
         .background(
@@ -952,17 +1006,23 @@ struct MosaicView: View {
         private var metadataRow: some View {
             HStack(spacing: 8) {
                 // Owner/source indicator with icon (only for received recipes)
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     if recipe.senderName != nil && !recipe.senderName!.isEmpty {
                         Image(systemName: "envelope.fill")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundColor(accentColor.opacity(0.7))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(accentColor.opacity(0.8))
                     }
                     
                     Text(displayOwnerName)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(Color(red: 0.3, green: 0.25, blue: 0.2).opacity(0.8))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(accentColor.opacity(0.12))
+                )
                 .lineLimit(1)
                 
                 Spacer(minLength: 4)
@@ -971,7 +1031,7 @@ struct MosaicView: View {
                 if !recipe.audioNotesArray.isEmpty {
                     HStack(spacing: 3) {
                         Image(systemName: "waveform.circle.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 18))
                             .foregroundColor(accentColor.opacity(0.6))
                     }
                 }
@@ -980,7 +1040,7 @@ struct MosaicView: View {
                 if !recipe.ingredientsArray.isEmpty {
                     HStack(spacing: 3) {
                         Image(systemName: "list.bullet.circle.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 18))
                             .foregroundColor(accentColor.opacity(0.6))
                     }
                 }
