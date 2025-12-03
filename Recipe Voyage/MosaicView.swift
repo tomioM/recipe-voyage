@@ -886,7 +886,7 @@ struct MosaicView: View {
                     .clipped()
                 
                 // Subtle accent gradient overlay
-                RoundedCornerShape(corners: roundedCorners, radius: 12)
+                Rectangle()
                     .fill(
                         LinearGradient(
                             gradient: Gradient(colors: [
@@ -935,7 +935,7 @@ struct MosaicView: View {
                 }
                 
                 // Elegant border with accent color
-                RoundedCornerShape(corners: roundedCorners, radius: 12)
+                Rectangle()
                     .stroke(
                         LinearGradient(
                             gradient: Gradient(colors: [

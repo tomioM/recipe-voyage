@@ -15,7 +15,6 @@ struct DecorativeFontOption: Identifiable {
         DecorativeFontOption(name: "Bodoni 72", displayName: "Bodoni"),
         DecorativeFontOption(name: "Copperplate", displayName: "Copperplate"),
         DecorativeFontOption(name: "Snell Roundhand", displayName: "Snell Roundhand"),
-        DecorativeFontOption(name: "Zapfino", displayName: "Zapfino"),
         DecorativeFontOption(name: "Cochin", displayName: "Cochin"),
         DecorativeFontOption(name: "Palatino", displayName: "Palatino")
     ]
