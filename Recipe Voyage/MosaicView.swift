@@ -877,7 +877,7 @@ struct MosaicView: View {
         
         // Title font size - optimized for space
         private var titleFontSize: CGFloat {
-            min(16, min(width, height) * 0.12)
+            min(17, min(width, height) * 0.14)
         }
         
         var body: some View {
