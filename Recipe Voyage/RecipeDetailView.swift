@@ -187,29 +187,80 @@ struct RecipeDetailView: View {
         
         return VStack(alignment: .leading, spacing: 16) {
             if let firstChar = title.first {
-                HStack(alignment: .top, spacing: 12) {
-                    // Decorative capital letter
-                    Text(String(firstChar).uppercased())
-                        .font(.custom(fontName, size: 84))
-                        .foregroundColor(accentColor)
-                        .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+                HStack(alignment: .top, spacing: 0) {
+                    // Decorative capital letter with ornamental frame
+                    decorativeCapitalView(letter: String(firstChar).uppercased(), fontName: fontName, accentColor: accentColor)
                     
                     // Rest of the title
                     VStack(alignment: .leading, spacing: 8) {
                         Text(String(title.dropFirst()))
-                            .font(.system(size: 38, weight: .bold))
+                            .font(.system(size: 38, weight: .bold, design: .serif))
                             .foregroundColor(Color(red: 0.25, green: 0.15, blue: 0.08))
                             .lineSpacing(4)
                     }
-                    .padding(.top, 16)
+                    .padding(.top, 12)
                 }
             } else {
                 Text(title)
-                    .font(.system(size: 38, weight: .bold))
+                    .font(.system(size: 38, weight: .bold, design: .serif))
                     .foregroundColor(Color(red: 0.25, green: 0.15, blue: 0.08))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    // MARK: - Decorative Capital View
+    
+    private func decorativeCapitalView(letter: String, fontName: String, accentColor: Color) -> some View {
+        let letterSize: CGFloat = 72
+        
+        return ZStack {
+            // Ornamental background circle
+            Circle()
+                .fill(
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            accentColor.opacity(0.15),
+                            accentColor.opacity(0.05)
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: letterSize * 0.6
+                    )
+                )
+                .frame(width: letterSize * 1.2, height: letterSize * 1.2)
+            
+            // Decorative ring
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            accentColor.opacity(0.4),
+                            accentColor.opacity(0.2)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+                .frame(width: letterSize * 1.1, height: letterSize * 1.1)
+            
+            // The decorative letter itself
+            Text(letter)
+                .font(.custom(fontName, size: letterSize))
+                .foregroundStyle(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            accentColor,
+                            accentColor.opacity(0.8)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: accentColor.opacity(0.3), radius: 3, x: 0, y: 2)
+        }
+        .frame(width: letterSize * 1.3, height: letterSize * 1.3)
     }
     
     // MARK: - Ancestry Section

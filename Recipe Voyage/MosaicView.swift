@@ -81,19 +81,19 @@ struct MosaicView: View {
                     HStack {
                         Spacer()
                         
-                        // DEBUG: Manual test button (remove in production)
-                        Button(action: {
-                            print("🔘 [DEBUG] Manual test button pressed")
-                            checkAndMoveToInbox()
-                        }) {
-                            Text("Test")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Capsule().fill(Color.blue))
-                        }
-                        .padding(.trailing, 8)
+//                        // DEBUG: Manual test button (remove in production)
+//                        Button(action: {
+//                            print("🔘 [DEBUG] Manual test button pressed")
+//                            checkAndMoveToInbox()
+//                        }) {
+//                            Text("Test")
+//                                .font(.system(size: 12, weight: .semibold))
+//                                .foregroundColor(.white)
+//                                .padding(.horizontal, 16)
+//                                .padding(.vertical, 8)
+//                                .background(Capsule().fill(Color.blue))
+//                        }
+//                        .padding(.trailing, 8)
                         
                         Button(action: {
                             showingCreateRecipe = true
@@ -793,7 +793,7 @@ struct MosaicView: View {
     }
     
     // MARK: - Mosaic Recipe Card
-    // Index card texture with accent color tint
+    // Refined index card with prominent decorative letter
     
     struct MosaicRecipeCard: View {
         let recipe: RecipeEntity
@@ -801,10 +801,6 @@ struct MosaicView: View {
         let height: CGFloat
         let isBeingDragged: Bool
         let roundedCorners: UIRectCorner
-        
-        // Calculate column widths (1:3 ratio)
-        private var leftColumnWidth: CGFloat { width * 0.33 }
-        private var rightColumnWidth: CGFloat { width * 0.67 }
         
         // Extract first letter for decorative capital
         private var firstLetter: String {
@@ -816,6 +812,16 @@ struct MosaicView: View {
             Color(hex: recipe.colorHex ?? "#8B4513") ?? .brown
         }
         
+        // Decorative letter size - scaled to card (larger and more prominent)
+        private var letterSize: CGFloat {
+            min(width, height) * 0.38
+        }
+        
+        // Title font size - optimized for space
+        private var titleFontSize: CGFloat {
+            min(16, min(width, height) * 0.12)
+        }
+        
         var body: some View {
             ZStack {
                 // Index card texture background
@@ -825,78 +831,158 @@ struct MosaicView: View {
                     .frame(width: width, height: height)
                     .clipped()
                 
-                // Accent color tint
+                // Subtle accent gradient overlay
                 RoundedCornerShape(corners: roundedCorners, radius: 12)
-                    .fill(accentColor.opacity(0.15))
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                accentColor.opacity(0.08),
+                                accentColor.opacity(0.03)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                 
                 // Card content
                 VStack(spacing: 0) {
-                    // Two columns: decorative capital and title
-                    HStack(spacing: 0) {
-                        // LEFT COLUMN: Decorative capital
-                        VStack {
-                            Spacer()
-                            
-                            Text(firstLetter)
-                                .font(.custom(recipe.decorativeCapFont ?? "Didot", size: min(width, height) * 0.35))
-                                .foregroundColor(accentColor)
-                            
-                            Spacer()
-                        }
-                        .frame(width: leftColumnWidth)
+                    // Main content area
+                    HStack(alignment: .top, spacing: 8) {
+                        // Decorative letter with ornamental frame
+                        decorativeLetterView
+                            .padding(.leading, 10)
+                            .padding(.top, 10)
                         
-                        // RIGHT COLUMN: Title
-                        VStack(alignment: .leading, spacing: 8) {
-                            Spacer()
+                        // Title and info
+                        VStack(alignment: .leading, spacing: 6) {
+                            Spacer(minLength: 8)
                             
+                            // Recipe title
                             Text(recipe.title ?? "Untitled")
-                                .font(.system(size: fontSize, weight: .semibold))
-                                .foregroundColor(.black)
+                                .font(.system(size: titleFontSize, weight: .semibold, design: .serif))
+                                .foregroundColor(Color(red: 0.2, green: 0.15, blue: 0.1))
                                 .multilineTextAlignment(.leading)
-                                .lineLimit(3)
+                                .lineLimit(4)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
                             Spacer()
+                            
+                            // Metadata row
+                            metadataRow
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 12)
-                        .frame(width: rightColumnWidth)
+                        .padding(.trailing, 10)
+                        .padding(.top, 10)
+                        .padding(.bottom, 8)
                     }
                     .frame(maxHeight: .infinity)
-                    
-                    // BOTTOM: Owner info line (full width)
-                    ownerInfoLine
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 8)
                 }
                 
-                // Border
+                // Elegant border with accent color
                 RoundedCornerShape(corners: roundedCorners, radius: 12)
-                    .stroke(accentColor.opacity(0.4), lineWidth: 2)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                accentColor.opacity(0.6),
+                                accentColor.opacity(0.3)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
             }
             .frame(width: width, height: height)
         }
         
-        // MARK: - Owner Info Line
+        // MARK: - Decorative Letter View
         
-        private var ownerInfoLine: some View {
-            HStack(spacing: 6) {
-                // Owner name
-                Text(displayOwnerName)
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.black.opacity(0.6))
+        private var decorativeLetterView: some View {
+            ZStack {
+                // Ornamental background circle
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                accentColor.opacity(0.15),
+                                accentColor.opacity(0.05)
+                            ]),
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: letterSize * 0.6
+                        )
+                    )
+                    .frame(width: letterSize * 1.2, height: letterSize * 1.2)
                 
-                Spacer()
+                // Decorative ring
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                accentColor.opacity(0.4),
+                                accentColor.opacity(0.2)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: letterSize * 1.1, height: letterSize * 1.1)
+                
+                // The decorative letter itself
+                Text(firstLetter)
+                    .font(.custom(recipe.decorativeCapFont ?? "Didot", size: letterSize))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                accentColor,
+                                accentColor.opacity(0.8)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: accentColor.opacity(0.3), radius: 2, x: 0, y: 1)
+            }
+            .frame(width: letterSize * 1.3, height: letterSize * 1.3)
+        }
+        
+        // MARK: - Metadata Row
+        
+        private var metadataRow: some View {
+            HStack(spacing: 8) {
+                // Owner/source indicator with icon (only for received recipes)
+                HStack(spacing: 4) {
+                    if recipe.senderName != nil && !recipe.senderName!.isEmpty {
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(accentColor.opacity(0.7))
+                    }
+                    
+                    Text(displayOwnerName)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(Color(red: 0.3, green: 0.25, blue: 0.2).opacity(0.8))
+                }
+                .lineLimit(1)
+                
+                Spacer(minLength: 4)
                 
                 // Audio indicator (if present)
                 if !recipe.audioNotesArray.isEmpty {
                     HStack(spacing: 3) {
-                        Image(systemName: "waveform")
-                            .font(.system(size: 8))
-                        Text("\(recipe.audioNotesArray.count)")
-                            .font(.system(size: 8, weight: .medium))
+                        Image(systemName: "waveform.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(accentColor.opacity(0.6))
                     }
-                    .foregroundColor(.black.opacity(0.5))
+                }
+                
+                // Ingredients count (if present)
+                if !recipe.ingredientsArray.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "list.bullet.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(accentColor.opacity(0.6))
+                    }
                 }
             }
         }
@@ -904,12 +990,13 @@ struct MosaicView: View {
         // MARK: - Computed Properties
         
         private var displayOwnerName: String {
-            let ownerName = recipe.owner?.name ?? "Unknown"
-            return ownerName == "self" ? "Personal Recipe" : ownerName
-        }
-        
-        private var fontSize: CGFloat {
-            min(18, min(width, height) * 0.14)
+            if let ownerName = recipe.ownerName, !ownerName.isEmpty {
+                return ownerName
+            } else if let senderName = recipe.senderName, !senderName.isEmpty {
+                return senderName
+            } else {
+                return "My Recipe"
+            }
         }
     }
     
