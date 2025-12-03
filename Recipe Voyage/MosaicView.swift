@@ -921,15 +921,17 @@ struct MosaicView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
                             Spacer()
-                            
-                            // Metadata row
-                            metadataRow
                         }
                         .padding(.trailing, 10)
                         .padding(.top, 10)
                         .padding(.bottom, 8)
                     }
                     .frame(maxHeight: .infinity)
+                    
+                    // Metadata row at bottom, spanning full width
+                    metadataRow
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
                 }
                 
                 // Elegant border with accent color
@@ -1045,6 +1047,7 @@ struct MosaicView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         
         // MARK: - Computed Properties
