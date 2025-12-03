@@ -452,18 +452,22 @@ struct MosaicView: View {
                         newlyAddedRecipeIDs: $newlyAddedRecipeIDs
                     ))
                     .contextMenu {
-                        Button {
-                            recipeToEdit = recipe
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        
-                        Button(role: .destructive) {
-                            withAnimation {
-                                dataManager.deleteRecipe(recipe)
+                        // Only show Edit and Delete buttons if the recipe belongs to the user (no external author)
+                        if (recipe.ownerName == nil || recipe.ownerName!.isEmpty) && 
+                           (recipe.senderName == nil || recipe.senderName!.isEmpty) {
+                            Button {
+                                recipeToEdit = recipe
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
                             }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                            
+                            Button(role: .destructive) {
+                                withAnimation {
+                                    dataManager.deleteRecipe(recipe)
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 }
