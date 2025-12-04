@@ -862,7 +862,10 @@ struct EditRecipeView: View {
             }
         }
         
-        dataManager.saveContext()
+        // Save and force a complete refresh (simulating app restart)
+        // This ensures edited steps/ingredients appear immediately without reboot
+        dataManager.saveAndRefreshContext()
+        
         dismiss()
     }
     
