@@ -92,6 +92,9 @@ struct RecipeDetailView: View {
     
     // Load and cache data to prevent flickering
     private func loadCachedData() {
+        // Immediately load the cached arrays
+        // Since we now call fetchRecipes() in CreateRecipeView before dismissing,
+        // the data should already be available
         cachedSteps = recipe.stepsArray
         cachedIngredients = recipe.ingredientsArray
         cachedAncestrySteps = recipe.ancestryStepsArray

@@ -334,11 +334,51 @@ class CoreDataManager: ObservableObject {
     // MARK: - Private Helpers
     
     func saveContext() {
-        do {
-            try container.viewContext.save()
-            print("💾 Saved to database")
-        } catch {
-            print("❌ Failed to save: \(error)")
+        let context = container.viewContext
+        
+        // Process any pending changes first
+        if context.hasChanges {
+            context.processPendingChanges()
+            
+            do {
+                try context.save()
+                print("💾 Saved to database")
+            } catch {
+                print("❌ Failed to save: \(error)")
+            }
+        }
+    }
+    
+    // Save context and force complete refresh (simulates app restart)
+    // This fixes the bug where steps don't appear until reboot
+    func saveAndRefreshContext() {
+        let context = container.viewContext
+        
+        // Process any pending changes first
+        if context.hasChanges {
+            context.processPendingChanges()
+            
+            do {
+                try context.save()
+                print("💾 Saved to database")
+                
+                // Reset the context to clear all cached objects
+                // This forces Core Data to reload everything from persistent store
+                // (This is what happens when you restart the app!)
+                context.reset()
+                print("🔄 Reset context - simulating app restart")
+                
+                // Now fetch everything fresh from the persistent store
+                fetchRecipes()
+                print("✅ Reloaded all recipes from disk")
+                
+            } catch {
+                print("❌ Failed to save: \(error)")
+            }
+        } else {
+            // Even if no changes detected, still refresh
+            context.reset()
+            fetchRecipes()
         }
     }
     

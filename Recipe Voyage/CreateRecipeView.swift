@@ -11,12 +11,12 @@ struct DecorativeFontOption: Identifiable {
     
     static let options: [DecorativeFontOption] = [
         DecorativeFontOption(name: "Didot", displayName: "Didot"),
+        DecorativeFontOption(name: "Snell Roundhand", displayName: "Snell Roundhand"),
+        DecorativeFontOption(name: "Palatino", displayName: "Palatino"),
         DecorativeFontOption(name: "Baskerville", displayName: "Baskerville"),
         DecorativeFontOption(name: "Bodoni 72", displayName: "Bodoni"),
         DecorativeFontOption(name: "Copperplate", displayName: "Copperplate"),
-        DecorativeFontOption(name: "Snell Roundhand", displayName: "Snell Roundhand"),
-        DecorativeFontOption(name: "Cochin", displayName: "Cochin"),
-        DecorativeFontOption(name: "Palatino", displayName: "Palatino")
+        DecorativeFontOption(name: "Cochin", displayName: "Cochin")
     ]
 }
 
@@ -879,7 +879,10 @@ struct CreateRecipeView: View {
             dataManager.addAudioNote(to: recipe, fileName: fileName, duration: recordedDuration)
         }
         
-        dataManager.saveContext()
+        // Save and force a complete refresh (simulating app restart)
+        dataManager.saveAndRefreshContext()
+        
+        // Dismiss after ensuring data is saved and reloaded
         dismiss()
     }
     
